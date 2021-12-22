@@ -4969,6 +4969,7 @@ sys     3m58.435s
 设置以非特权用户身份测试结果，但不要因错误而停止：
 
 ```sh
+# 以下测试命令非常耗时！
 (lfs chroot) root:/sources/gcc-10.2.0/build# chown -Rv tester . 
 (lfs chroot) root:/sources/gcc-10.2.0/build# su tester -c "PATH=$PATH make -k check"
 ```
@@ -5508,7 +5509,7 @@ Libtool 包包含 GNU 通用库支持脚本。它将使用共享库的复杂性�
 配置编译并检查，注意在具有多核的系统上，可以显著减少 libtool 的测试时间。为此，请将 TESTSUITEFLAGS=-j<N> 附加到上面的行。例如，使用 -j4 可以将测试时间减少 60% 以上。
 
 ```sh
-time { ./configure --prefix=/usr && make && make check; }
+time { ./configure --prefix=/usr && make && make -j4 check; }
 
 # 检查完成后输出信息：
 
@@ -5527,6 +5528,2247 @@ time { make install; }
 ```sh
 
 ```
+
+### 8.36 安装 GDBM-1.18.1
+
+GDBM 包包含 GNU 数据库管理器。它是一个使用可扩展散列的数据库函数库，其工作方式类似于标准的 UNIX dbm。该库提供了用于存储密钥/数据对、通过密钥搜索和检索数据以及删除密钥及其数据的原语。
+
+解压软件包
+
+```sh
+
+```
+
+修复由 gcc-10 首次发现的问题：
+
+```sh
+sed -r -i '/^char.*parseopt_program_(doc|args)/d' src/parseopt.c
+```
+
+配置编译并检查
+
+```sh
+time { ./configure --prefix=/usr  \
+            --disable-static      \
+            --enable-libgdbm-compat && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.37 安装 Gperf-3.1
+
+Gperf 从一个键集生成一个完美的散列函数。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查，如果同时运行多个测试（-j 选项大于 1），则测试会失败。要测试结果，请执行：
+
+```sh
+time { ./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.1 && make && make -j1 check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.38 安装 Expat-2.2.9
+
+Expat 包含一个用于解析 XML 的面向流的 C 库。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr    \
+            --disable-static        \
+            --docdir=/usr/share/doc/expat-2.2.9 && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+如果需要，请安装文档：
+
+```sh
+install -v -m644 doc/*.{html,png,css} /usr/share/doc/expat-2.2.9
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.39 安装 Inetutils-1.9.4
+
+Inetutils 包含用于基本网络的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr \
+            --localstatedir=/var \
+            --disable-logger     \
+            --disable-whois      \
+            --disable-rcp        \
+            --disable-rexec      \
+            --disable-rlogin     \
+            --disable-rsh        \
+            --disable-servers && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+注意：测试 `libls.sh` 在初始 chroot 环境中可能会失败，但如果在 LFS 系统完成后重新运行该测试，它就会通过。如果主机系统没有 ipv6 功能，一项测试 `ping-localhost.sh` 将失败。
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+移动一些程序，以便在 /usr 不可访问时它们可用：
+
+```sh
+mv -v /usr/bin/{hostname,ping,ping6,traceroute} /bin
+mv -v /usr/bin/ifconfig /sbin
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.40 安装 Perl-5.32.0
+
+Perl 包含实用提取和报告语言。
+
+解压软件包
+
+```sh
+
+```
+
+这个版本的 Perl 现在构建了 Compress::Raw::Zlib 和 Compress::Raw::BZip2 模块。默认情况下，Perl 将使用源的内部副本进行构建。发出以下命令，以便 Perl 使用系统上安装的库：
+
+```sh
+export BUILD_ZLIB=False
+export BUILD_BZIP2=0
+```
+
+要完全控制 Perl 的设置方式，您可以从以下命令中删除 `-des` 选项并手动选择此包的构建方式。或者，使用完全如下的命令来使用 Perl 自动检测的默认值，同时编译并测试：
+
+```sh
+# 注意：下面的命令耗时非常长！
+time { sh Configure -des                                  \
+             -Dprefix=/usr                                \
+             -Dvendorprefix=/usr                          \
+             -Dprivlib=/usr/lib/perl5/5.32/core_perl      \
+             -Darchlib=/usr/lib/perl5/5.32/core_perl      \
+             -Dsitelib=/usr/lib/perl5/5.32/site_perl      \
+             -Dsitearch=/usr/lib/perl5/5.32/site_perl     \
+             -Dvendorlib=/usr/lib/perl5/5.32/vendor_perl  \
+             -Dvendorarch=/usr/lib/perl5/5.32/vendor_perl \
+             -Dman1dir=/usr/share/man/man1                \
+             -Dman3dir=/usr/share/man/man3                \
+             -Dpager="/usr/bin/less -isR"                 \
+             -Duseshrplib                                 \
+             -Dusethreads && make && make test; }
+
+# 测试完成后输出的信息：
+
+```
+
+安装软件包并清理：
+
+```sh
+make install
+unset BUILD_ZLIB BUILD_BZIP2
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.41 安装 XML::Parser-2.46
+
+XML::Parser 模块是 James Clark 的 XML 解析器 Expat 的 Perl 接口。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并测试：
+
+```sh
+time { perl Makefile.PL && make && make test; }
+
+# 测试完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.42 安装 Intltool-0.51.0
+
+Intltool 是一种国际化工具，用于从源文件中提取可翻译的字符串。
+
+解压软件包
+
+```sh
+
+```
+
+首先修复一个由 perl-5.22 及更高版本引起的警告：
+
+```sh
+sed -i 's:\\\${:\\\$\\{:' intltool-update.in
+```
+
+由于所有的反斜杠，上面的正则表达式看起来不寻常。它的作用是在序列 `'\${'` 中的右大括号字符之前添加一个反斜杠，从而得到 `'\$\{'`。
+
+配置编译并测试：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 测试完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install && install -v -Dm644 doc/I18N-HOWTO /usr/share/doc/intltool-0.51.0/I18N-HOWTO; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.43 安装 Autoconf-2.69
+
+Autoconf 包含用于生成可自动配置源代码的 shell 脚本的程序。
+
+解压软件包
+
+```sh
+
+```
+
+首先修复由 Perl 5.28 生成的错误。
+
+```sh
+sed -i '361 s/{/\\{/' bin/autoscan.in
+```
+
+配置编译并测试：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 测试完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.44 安装 Automake-1.16.2
+
+Automake 包含用于生成用于 Autoconf 的 Makefile 的程序。
+
+解压软件包
+
+```sh
+
+```
+
+修复失败的测试：
+
+```sh
+sed -i "s/''/etags/" t/tags-lisp-space.sh
+```
+
+配置编译并测试，由于个别测试的内部延迟，使用 -j4 make 选项可以加快测试速度，即使在只有一个处理器的系统上也是如此。：
+
+```sh
+time { ./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.16.2 && make && make -j4 check; }
+
+# 测试完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.45 安装 Kmod-27
+
+Kmod 包含用于加载内核模块的库和实用程序
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并安装：
+
+```sh
+time { ./configure --prefix=/usr   \
+            --bindir=/bin          \
+            --sysconfdir=/etc      \
+            --with-rootlibdir=/lib \
+            --with-xz              \
+            --with-zlib && make && make install; }
+
+# 测试完成后输出信息：
+
+```
+
+这个包没有附带可以在 LFS chroot 环境中运行的测试套件。需要最小的 git 程序，并且一些测试不会在 git 存储库之外运行。
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+创建符号链接以与 Module-Init-Tools（以前处理 Linux 内核模块的包）兼容：
+
+```sh
+# 执行脚本
+for target in depmod insmod lsmod modinfo modprobe rmmod; do
+  ln -sfv ../bin/kmod /sbin/$target
+done
+# 创建链接
+ln -sfv kmod /bin/lsmod
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.46 安装 Libelf from Elfutils-0.180
+
+Libelf 是一个用于处理 ELF（可执行和可链接格式）文件的库。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr --disable-debuginfod --libdir=/lib && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+只安装 Libelf：
+
+```sh
+make -C libelf install
+install -vm644 config/libelf.pc /usr/lib/pkgconfig
+rm /lib/libelf.a
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.47 安装 Libffi-3.3
+
+Libffi 库为各种调用约定提供了可移植的高级编程接口。这允许程序员在运行时调用由调用接口描述指定的任何函数。
+
+与 GMP 类似，libffi 使用特定于所用处理器的优化构建。如果为另一个系统构建，请导出 CFLAGS 和 CXXFLAGS 以指定架构的通用构建。如果不这样做，所有链接到 libffi 的应用程序都会触发非法操作错误。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr --disable-static --with-gcc-arch=native && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.48 安装 OpenSSL-1.1.1g
+
+OpenSSL 包含与加密相关的管理工具和库。这些对于为其他包提供加密功能非常有用，例如 OpenSSH、电子邮件应用程序和 Web 浏览器（用于访问 HTTPS 站点）。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+./config --prefix=/usr         \
+         --openssldir=/etc/ssl \
+         --libdir=lib          \
+         shared                \
+         zlib-dynamic && make && make test; }
+
+# 检查完成后输出信息：
+
+```
+
+已知一项测试 `30-test_afalg.t` 在某些内核配置上失败（它显然假设已选择了某些未指定的加密选项，我们可以忽略）。
+
+安装软件包
+
+```sh
+time { sed -i '/INSTALL_LIBS/s/libcrypto.a libssl.a//' Makefile && make MANSUFFIX=ssl install; }
+
+# 安装完成后输出信息：
+```
+
+如果需要，请安装文档：
+
+```sh
+mv -v /usr/share/doc/openssl /usr/share/doc/openssl-1.1.1g
+cp -vfr doc/* /usr/share/doc/openssl-1.1.1g
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.49 安装 Python-3.8.5
+
+Python 3 包含 Python 开发环境。它对于面向对象编程、编写脚本、大型程序原型或开发整个应用程序非常有用。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并安装：
+
+```sh
+./configure --prefix=/usr       \
+            --enable-shared     \
+            --with-system-expat \
+            --with-system-ffi   \
+            --with-ensurepip=yes && make && make install; }
+
+# 检查完成后输出信息：
+
+```
+
+要测试结果，可以执行 `make test`。一些需要网络连接或附加包的测试被跳过。名为 `test_normalization` 的测试会失败，因为尚未完成网络配置。为了获得更全面的结果，可以在 BLFS 中重新安装 Python 3 时重新运行测试。(我不运行此次测试程序)
+
+更改权限并创建链接
+
+```sh
+chmod -v 755 /usr/lib/libpython3.8.so
+chmod -v 755 /usr/lib/libpython3.so
+ln -sfv pip3.8 /usr/bin/pip3
+```
+
+如果需要，安装预先格式化的文档：
+
+```sh
+install -v -dm755 /usr/share/doc/python-3.8.5/html
+
+tar --strip-components=1  \
+    --no-same-owner       \
+    --no-same-permissions \
+    -C /usr/share/doc/python-3.8.5/html \
+    -xvf ../python-3.8.5-docs-html.tar.bz2
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.50 安装 Ninja-1.10.0
+
+Ninja 是一个专注于速度的小型构建系统。
+
+Tips: 如果不使用 systemd，则 LFS 不严格要求此部分。然而，Ninja 和 Meson(下文会构建) 进行了强大的构建系统整合，预计会越来越频繁地使用。 BLFS 书中的几个包都需要它。
+
+解压软件包
+
+```sh
+
+```
+
+运行时，ninja 通常并行运行最大数量的进程。默认情况下，这是系统上的内核数加 2。在某些情况下，这可能会使 CPU 过热或使系统内存不足。如果从命令行运行，传递 -jN 参数会限制并行进程的数量，但有些包嵌入了 ninja 的执行，并没有传递 -j 参数。
+
+使用下面的可选过程允许用户通过环境变量 NINJAJOBS 限制并行进程的数量：
+
+```sh
+export NINJAJOBS=4
+```
+
+以上命令将 ninja 限制为四个并行进程。
+
+如果需要，通过运行以下命令添加使用环境变量 NINJAJOBS 的功能：
+
+```sh
+sed -i '/int Guess/a \
+  int   j = 0;\
+  char* jobs = getenv( "NINJAJOBS" );\
+  if ( jobs != NULL ) j = atoi( jobs );\
+  if ( j > 0 ) return j;\
+' src/ninja.cc
+```
+
+使用以下命令构建 Ninja：
+
+```sh
+python3 configure.py --bootstrap
+```
+
+要测试结果，请执行：
+
+```sh
+./ninja ninja_test
+./ninja_test --gtest_filter=-SubprocessTest.SetWithLots
+```
+
+安装软件包
+
+```sh
+install -vm755 ninja /usr/bin/
+install -vDm644 misc/bash-completion /usr/share/bash-completion/completions/ninja
+install -vDm644 misc/zsh-completion  /usr/share/zsh/site-functions/_ninja
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.51 安装 Meson-0.55.0
+
+Meson 是一个开源构建系统，旨在速度极快且用户友好。
+
+Tips: 如果不使用 systemd，则 LFS 不严格要求此部分。然而，Ninja(上文已构建) 和 Meson 进行了强大的构建系统整合，预计会越来越频繁地使用。 BLFS 书中的几个包都需要它。
+
+解压软件包
+
+```sh
+
+```
+
+使用以下命令编译 Meson：
+
+```sh
+python3 setup.py build
+```
+
+此软件包不附带测试套件。
+
+安装软件包
+
+```sh
+python3 setup.py install --root=dest
+cp -rv dest/* /
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.52 安装 Coreutils-8.32
+
+Coreutils 包含用于显示和设置基本系统特征的实用程序。
+
+解压软件包
+
+```sh
+
+```
+
+POSIX 要求来自 Coreutils 的程序即使在多字节语言环境中也能正确识别字符边界。以下补丁修复了这种不合规性和其他与国际化相关的错误。
+
+```sh
+patch -Np1 -i ../coreutils-8.32-i18n-1.patch
+```
+
+注意：以前在此补丁中发现了许多错误。向 Coreutils 维护者报告新错误时，请先检查它们是否可以在没有此补丁的情况下重现。
+
+禁止在某些机器上可以永远循环的测试：
+
+```sh
+sed -i '/test.lock/s/^/#/' gnulib-tests/gnulib.mk
+```
+
+配置并编译
+
+```sh
+time { autoreconf -fiv && FORCE_UNSAFE_CONFIGURE=1 ./configure \
+            --prefix=/usr            \
+            --enable-no-install-program=kill,uptime && make; }
+
+# 编译完成后输出以下信息：
+```
+
+现在测试套件已准备好运行。首先，运行以 root 用户身份运行的测试：
+
+```sh
+make NON_ROOT_USERNAME=tester check-root
+```
+
+接下来将切换至 tester 用户运行其余的测试。某些测试要求用户是多个组的成员。为了不跳过这些测试，添加一个临时组并使用户 tester 成为其中的一部分：
+
+```sh
+echo "dummy:x:102:tester" >> /etc/group
+```
+
+修复一些权限，以便非 root 用户可以编译和运行测试：
+
+```sh
+chown -Rv tester .
+```
+
+现在运行测试：
+
+```sh
+su tester -c "PATH=$PATH make RUN_EXPENSIVE_TESTS=yes check"
+```
+
+已知 `test-getlogin` 测试在 LFS chroot 环境中失败。
+
+删除临时组：
+
+```sh
+sed -i '/dummy/d' /etc/group
+```
+
+安装软件包：
+
+```sh
+make install
+```
+
+将程序移动到 FHS 指定的位置：
+
+```sh
+mv -v /usr/bin/{cat,chgrp,chmod,chown,cp,date,dd,df,echo} /bin
+mv -v /usr/bin/{false,ln,ls,mkdir,mknod,mv,pwd,rm} /bin
+mv -v /usr/bin/{rmdir,stty,sync,true,uname} /bin
+mv -v /usr/bin/chroot /usr/sbin
+mv -v /usr/share/man/man1/chroot.1 /usr/share/man/man8/chroot.8
+sed -i 's/"1"/"8"/' /usr/share/man/man8/chroot.8
+```
+
+LFS-Bootscripts 包中的一些脚本依赖于 head、nice、sleep 和 touch。由于 /usr 在引导的早期和后期阶段可能不可用，这些二进制文件需要移动到根分区上以保持 FHS 合规性：
+
+```sh
+mv -v /usr/bin/{head,nice,sleep,touch} /bin
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.53 安装 Check-0.15.2
+
+Check 是 C 的单元测试框架
+
+解压软件包
+
+```sh
+
+```
+
+配置并编译检查：
+
+```sh
+time { ./configure --prefix=/usr --disable-static && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+请注意，检查测试套件可能需要相对较长（最多 4 个 SBU）的时间。
+
+安装软件包
+
+```sh
+time { make docdir=/usr/share/doc/check-0.15.2 install; }
+
+# 安装完成后显示内容如下：
+
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.54 安装 Diffutils-3.7
+
+Diffutils 包含显示文件或目录之间差异的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置并编译检查：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.55 安装 Gawk-5.1.0
+
+Gawk 包含用于处理文本文件的程序。
+
+解压软件包
+
+```sh
+
+```
+
+确保没有安装一些不需要的文件：
+
+```sh
+sed -i 's/extras//' Makefile.in
+```
+
+配置并编译检查：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+
+```
+
+如果需要，请安装文档：
+
+```sh
+mkdir -v /usr/share/doc/gawk-5.1.0
+cp -v doc/{awkforai.txt,*.{eps,pdf,jpg}} /usr/share/doc/gawk-5.1.0
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.56 安装 Findutils-4.7.0
+
+Findutils 包含查找文件的程序。这些程序用于递归搜索目录树以及创建、维护和搜索数据库（通常比递归查找快，但如果数据库最近没有更新则不可靠）。
+
+解压软件包
+
+```sh
+
+```
+
+配置并编译：
+
+```sh
+time { ./configure --prefix=/usr --localstatedir=/var/lib/locate && make; }
+
+# 编译完成后显示内容如下：
+
+```
+
+要测试结果，请执行：
+
+```sh
+chown -Rv tester .
+su tester -c "PATH=$PATH make check"
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+
+```
+
+LFS-Bootscripts 包中的一些脚本依赖于 find。由于 /usr 在引导的早期阶段可能不可用，因此该程序需要位于根分区上。还需要修改 updatedb 脚本以更正显式路径：
+
+```sh
+mv -v /usr/bin/find /bin
+sed -i 's|find:=${BINDIR}|find:=/bin|' /usr/bin/updatedb
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.57 安装 Groff-1.22.4
+
+Groff 包含用于处理和格式化文本的程序。
+
+解压软件包
+
+```sh
+
+```
+
+Groff 期望环境变量 PAGE 包含默认的纸张大小。对于美国用户，PAGE=letter 比较合适。在其他地方，PAGE=A4 可能更合适。虽然在编译期间配置了默认纸张大小，但稍后可以通过将“A4”或“letter”回显到 `/etc/papersize` 文件来覆盖它。
+
+配置并编译，此包不支持并行构建，因此使用了 `make -j1`：
+
+```sh
+# 请注意这里我将默认纸张大小设置为 A4
+time { PAGE=A4 ./configure --prefix=/usr && make -j1 && make install; }
+
+# 编译完成后显示内容如下：
+
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.58 安装 GRUB-2.04
+
+GRUB 包含 GRand Unified Bootloader。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并安装：
+
+```sh
+# 请注意这里我将默认纸张大小设置为 A4
+time { ./configure --prefix=/usr   \
+            --sbindir=/sbin        \
+            --sysconfdir=/etc      \
+            --disable-efiemu       \
+            --disable-werror && make && make install; }
+
+# 编译完成后显示内容如下：
+
+```
+
+此软件包不附带测试套件。
+
+移动文件
+
+```sh
+mv -v /etc/bash_completion.d/grub /usr/share/bash-completion/completions
+```
+
+使用 GRUB 使您的 LFS 系统可启动将在第 10.4 节“使用 GRUB 设置启动过程”中讨论。
+
+清理软件包
+
+```sh
+
+```
+
+### 8.60 安装 Gzip-1.10
+
+Gzip 包含用于压缩和解压缩文件的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+移动一个需要在根文件系统上的程序：
+
+```sh
+mv -v /usr/bin/gzip /bin
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.61 安装 IPRoute2-5.8.0
+
+IPRoute2 包含用于基本和高级基于 IPV4 的网络的程序。
+
+解压软件包
+
+```sh
+
+```
+
+该包中包含的 arpd 程序将不会构建，因为它依赖于未安装在 LFS 中的 Berkeley DB。但是，仍会安装 arpd 目录和手册页。通过运行以下命令来防止这种情况。如果需要 arpd 二进制文件，可以在 http://www.linuxfromscratch.org/blfs/view/10.0/server/db.html 的 BLFS Book 中找到编译 Berkeley DB 的说明。
+
+```sh
+# 执行以下命令
+sed -i /ARPD/d Makefile
+rm -fv man/man8/arpd.8
+```
+
+还需要禁用构建两个需要 http://www.linuxfromscratch.org/blfs/view/10.0/postlfs/iptables.html 的模块。
+
+```sh
+sed -i 's/.m_ipt.o//' tc/Makefile
+```
+
+编译并安装软件：
+
+```sh
+time { make && make DOCDIR=/usr/share/doc/iproute2-5.8.0 install; }
+
+# 安装完成后显示内容如下：
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.62 安装 Kbd-2.3.0
+
+Kbd 包含键表文件、控制台字体和键盘实用程序。
+
+解压软件包
+
+```sh
+
+```
+
+退格键和删除键的行为在 Kbd 包中的键映射中不一致。以下补丁修复了 i386 键盘映射的这个问题：
+
+```sh
+patch -Np1 -i ../kbd-2.3.0-backspace-1.patch
+```
+
+打补丁后，退格键生成代码为 127 的字符，删除键生成众所周知的转义序列。
+
+删除多余的 resizecons 程序（它需要已失效的 svgalib 来提供视频模式文件 - 对于正常使用，请适当设置控制台的 setfont 大小）及其手册页。
+
+```sh
+sed -i '/RESIZECONS_PROGS=/s/yes/no/' configure
+sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr --disable-vlock && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+删除无意安装的内部库：
+
+```sh
+rm -v /usr/lib/libtswrap.{a,la,so*}
+```
+
+注意：对于某些语言（例如，白俄罗斯语），Kbd 包不提供有用的键映射，其中库存“by”键映射假定 ISO-8859-5 编码，并且通常使用 CP1251 键映射。这些语言的用户必须单独下载工作键盘映射。
+
+如果需要，请安装文档：
+
+```sh
+mkdir -v /usr/share/doc/kbd-2.3.0
+cp -R -v docs/doc/* /usr/share/doc/kbd-2.3.0
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.63 安装 Libpipeline-1.5.3
+
+Libpipeline 包含一个以灵活方便的方式操作子进程管道的库。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.64 安装 Make-4.3
+
+Make 包含一个程序，用于控制从源文件生成包的可执行文件和其他非源文件。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.65 安装 Patch-2.7.6
+
+Patch 包含一个程序，用于通过应用通常由 diff 程序创建的“补丁”文件来修改或创建文件。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.66 安装 Man-DB-2.9.3
+
+Man-DB 包含用于查找和查看手册页的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr                 \
+            --docdir=/usr/share/doc/man-db-2.9.3 \
+            --sysconfdir=/etc                    \
+            --disable-setuid                     \
+            --enable-cache-owner=bin             \
+            --with-browser=/usr/bin/lynx         \
+            --with-vgrind=/usr/bin/vgrind        \
+            --with-grap=/usr/bin/grap            \
+            --with-systemdtmpfilesdir=           \
+            --with-systemdsystemunitdir= && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+支持 `Simplified Chinese (zh_CN)` 语言，编码格式为 `GBK`
+
+清理软件包
+
+```sh
+
+```
+
+### 8.67 安装 Tar-1.32
+
+Tar 提供了创建 tar 档案以及执行各种其他类型的档案操作的能力。Tar 可用于先前创建的档案以提取文件、存储其他文件，或者更新或列出已存储的文件。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { FORCE_UNSAFE_CONFIGURE=1  \
+./configure --prefix=/usr        \
+            --bindir=/bin && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install && make -C doc install-html docdir=/usr/share/doc/tar-1.32; }
+
+# 安装完成后显示内容如下：
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.68 安装 Texinfo-6.7
+
+Texinfo 包含用于读取、写入和转换信息页面的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr --disable-static && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包，同时安装属于 TeX 的组件
+
+```sh
+time { make install && make TEXMF=/usr/share/texmf install-tex; }
+
+# 安装完成后显示内容如下：
+```
+
+信息文档系统使用纯文本文件来保存其菜单条目列表。该文件位于 `/usr/share/info/dir`。不幸的是，由于各种软件包的 Makefile 中偶尔出现问题，它有时会与系统上安装的信息页面不同步。如果需要重新创建 `/usr/share/info/dir` 文件，以下可选命令将完成任务：
+
+```sh
+pushd /usr/share/info
+  rm -v dir
+  for f in *
+    do install-info $f dir 2>/dev/null
+  done
+popd
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.69 安装 Vim-8.2.1361
+
+Vim 包含一个强大的文本编辑器。
+
+#### 8.69.1 安装 Vim
+
+解压软件包
+
+```sh
+
+```
+
+首先将 vimrc 配置文件的默认位置更改为 /etc：
+
+```sh
+echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
+```
+
+配置并编译：
+
+```sh
+time { ./configure --prefix=/usr && make; }
+
+# 检查完成后显示内容如下：
+
+```
+
+要准备测试，请确保用户 tester 可以写入源代码树：
+
+```sh
+chown -Rv tester .
+```
+
+现在以用户 tester 身份运行测试：
+
+```sh
+su tester -c "LANG=en_US.UTF-8 make -j1 test" &> vim-test.log
+```
+
+测试套件向屏幕输出大量二进制数据。这可能会导致当前终端的设置出现问题。可以通过将输出重定向到日志文件来避免该问题，如上所示。成功的测试将在完成时在日志文件中显示 `ALL DONE` 字样。
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+许多用户习惯于使用 vi 而不是 vim。要在用户习惯性地输入 vi 时允许执行 vim，请使用提供的语言为二进制文件和手册页创建一个符号链接：
+
+```sh
+ln -sv vim /usr/bin/vi
+for L in  /usr/share/man/{,*/}man1/vim.1; do
+    ln -sv vim.1 $(dirname $L)/vi.1
+done
+```
+
+默认情况下，vim 的文档安装在 `/usr/share/vim` 中。以下符号链接允许通过 `/usr/share/doc/vim-8.2.1361` 访问文档，使其与其他包的文档位置保持一致：
+
+```sh
+ln -sv ../vim/vim82/doc /usr/share/doc/vim-8.2.1361
+```
+
+清理软件包
+
+```sh
+
+```
+
+#### 8.69.2 配置 Vim
+
+默认情况下 vim 在不兼容 vi 的模式下运行。这对于过去使用其他编辑器的用户来说可能显得陌生。以下配置包含的 “nocompatible” 设定是为了强调编辑器使用了新的行为这一事实。它也提醒那些想要使用 “compatible” 模式的用户，必须在配置文件的一开始改变模式。这是因为它会修改其他设置，对这些设置的覆盖必须在设定模式后进行。执行以下命令创建默认 vim 配置文件：
+
+```sh
+# 执行以下指令
+cat > /etc/vimrc << "EOF"
+" Begin /etc/vimrc
+
+" Ensure defaults are set before customizing settings, not after
+source $VIMRUNTIME/defaults.vim
+let skip_defaults_vim=1 
+
+set nocompatible
+set backspace=2
+set mouse=
+syntax on
+if (&term == "xterm") || (&term == "putty")
+  set background=dark
+endif
+
+" End /etc/vimrc
+EOF
+```
+
+`set nocompatible` 设置使 vim 以比 vi 兼容方式更有用的方式（默认）运行。删除“no”以保留旧的 vi 行为。`set backspace=2` 设置允许在换行符、自动缩进和插入开始处退格。参数上的语法启用 vim 的语法突出显示。在 chroot 中或通过远程连接工作时，`set mouse=` 设置允许使用鼠标正确粘贴文本。最后，带有 `set background=dark` 设置的 if 语句纠正了 vim 对某些终端模拟器背景颜色的猜测。这为突出显示这些程序的黑色背景提供了更好的配色方案。
+
+可以通过运行以下命令获取其他可用选项的文档：
+
+```sh
+vim -c ':options'
+```
+
+注意：默认情况下，vim 只安装英语的拼写文件。要为您的首选语言安装拼写文件，请从 ftp://ftp.vim.org/pub/vim/runtime/spell/ 下载 *.spl 和可选的 *.sug 文件，并保存它们到 /usr/share/vim/vim82/spell/。
+
+要使用这些拼写文件，需要在 /etc/vimrc 中进行一些配置，例如：
+
+```sh
+# 在 /etc/vimrc 中配置 (我不运行此命令)
+set spelllang=en,ru
+set spell
+```
+
+有关更多信息，请参阅位于上述 URL 的相应 README 文件。
+
+### 8.70 安装 Eudev-3.2.9
+
+Eudev 包含用于动态创建设备节点的程序。
+
+#### 8.70.1 安装 Eudev
+
+解压软件包
+
+```sh
+
+```
+
+配置并编译：
+
+```sh
+time { ./configure --prefix=/usr    \
+            --bindir=/sbin          \
+            --sbindir=/sbin         \
+            --libdir=/usr/lib       \
+            --sysconfdir=/etc       \
+            --libexecdir=/lib       \
+            --with-rootprefix=      \
+            --with-rootlibdir=/lib  \
+            --enable-manpages       \
+            --disable-static && make; }
+
+# 编译完成后显示内容如下：
+
+```
+
+现在创建一些测试所需的目录，但也将用作安装的一部分：
+
+```sh
+mkdir -pv /lib/udev/rules.d
+mkdir -pv /etc/udev/rules.d
+```
+
+若要测试结果，请执行：
+
+```sh
+time { make check; }
+
+# 检查完成后显示内容如下：
+```
+
+安装软件包：
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+安装一些在 LFS 环境中有用的自定义规则和支持文件：
+
+```sh
+tar -xvf ../udev-lfs-20171102.tar.xz
+make -f udev-lfs-20171102/Makefile.lfs install
+```
+
+#### 8.70.2 配置 Eudev
+
+有关硬件设备的信息保存在 `/etc/udev/hwdb.d` 和 `/lib/udev/hwdb.d` 目录中。 Eudev 需要将该信息编译到二进制数据库 `/etc/udev/hwdb.bin` 中。创建初始数据库：
+
+```sh
+udevadm hwdb --update
+```
+
+每次更新硬件信息时都需要运行此命令。
+
+清理安装包
+
+```sh
+
+```
+
+### 8.71 安装 Procps-ng-3.3.16
+
+Procps-ng 包含用于监控进程的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查：
+
+```sh
+time { ./configure --prefix=/usr                     \
+            --exec-prefix=                           \
+            --libdir=/usr/lib                        \
+            --docdir=/usr/share/doc/procps-ng-3.3.16 \
+            --disable-static                         \
+            --disable-kill && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+最后，将必要的库移动到一个可以在 /usr 未安装的情况下找到的位置。
+
+```sh
+mv -v /usr/lib/libprocps.so.* /lib
+ln -sfv ../../lib/$(readlink /usr/lib/libprocps.so) /usr/lib/libprocps.so
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.72 安装 Util-linux-2.36
+
+Util-linux 包含各种实用程序。其中包括用于处理文件系统、控制台、分区和消息的实用程序。
+
+解压软件包
+
+```sh
+
+```
+
+FHS 建议使用 /var/lib/hwclock 目录而不是通常的 /etc 目录作为 adjtime 文件的位置。使用以下命令创建此目录：
+
+```sh
+mkdir -pv /var/lib/hwclock
+```
+
+配置并编译，`--disable` 和 `--without` 选项可防止有关构建需要不在 LFS 中的包或与其他包安装的程序不一致的组件的警告：
+
+```sh
+time { ./configure ADJTIME_PATH=/var/lib/hwclock/adjtime   \
+            --docdir=/usr/share/doc/util-linux-2.36 \
+            --disable-chfn-chsh  \
+            --disable-login      \
+            --disable-nologin    \
+            --disable-su         \
+            --disable-setpriv    \
+            --disable-runuser    \
+            --disable-pylibmount \
+            --disable-static     \
+            --without-python     \
+            --without-systemd    \
+            --without-systemdsystemunitdir && make; }
+
+# 编译完成后显示内容如下：
+
+```
+
+警告：以 root 用户身份运行测试套件可能对您的系统有害。要运行它，内核的 CONFIG_SCSI_DEBUG 选项必须在当前运行的系统中可用，并且必须构建为模块。将其构建到内核中将阻止启动。为了完全覆盖，必须安装其他 BLFS 包。如果需要，可以在重新启动到完整的 LFS 系统并运行后运行此测试：`bash tests/run.sh --srcdir=$PWD --builddir=$PWD` (我不运行此命令)
+
+如果需要，以非 root 用户身份运行测试套件：
+
+```sh
+chown -Rv tester .
+su tester -c "make -k check"
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+清理软件包
+
+```sh
+
+```
+
+### 8.73 安装 E2fsprogs-1.45.6
+
+E2fsprogs 包含用于处理 ext2 文件系统的实用程序。它还支持 ext3 和 ext4 日志文件系统。
+
+解压软件包
+
+```sh
+
+```
+
+E2fsprogs 文档建议将包构建在源代码树的子目录中：
+
+```sh
+mkdir -v build
+cd build
+```
+
+配置编译并检查：
+
+```sh
+time { ../configure --prefix=/usr    \
+             --bindir=/bin           \
+             --with-root-prefix=""   \
+             --enable-elf-shlibs     \
+             --disable-libblkid      \
+             --disable-libuuid       \
+             --disable-uuidd         \
+             --disable-fsck && make && make check; }
+
+# 检查完成后显示内容如下：
+
+```
+
+在机械硬盘上，测试需要 4 个多一点的 SBU。它们在 SSD 上可以更短（低至约 1.5 个 SBU）。
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后显示内容如下：
+```
+
+使已安装的静态库可写，以便以后可以删除调试符号：
+
+```sh
+chmod -v u+w /usr/lib/{libcom_err,libe2p,libext2fs,libss}.a
+```
+
+这个包安装了一个 gzip 压缩的 .info 文件，但不更新系统范围的 dir 文件。解压缩此文件，然后使用以下命令更新系统目录文件：
+
+```sh
+gunzip -v /usr/share/info/libext2fs.info.gz
+install-info --dir-file=/usr/share/info/dir /usr/share/info/libext2fs.info
+```
+
+如果需要，通过执行以下命令来创建和安装一些附加文档：
+
+```sh
+makeinfo -o      doc/com_err.info ../lib/et/com_err.texinfo
+install -v -m644 doc/com_err.info /usr/share/info
+install-info --dir-file=/usr/share/info/dir /usr/share/info/com_err.info
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.74 安装 Sysklogd-1.5.1
+
+Sysklogd 包含记录系统消息的程序，例如发生异常情况时内核给出的消息。
+
+#### 8.74.1 安装 Sysklogd
+
+解压软件包
+
+```sh
+
+```
+
+首先修复在 klogd 中某些条件下导致分段错误的问题，并修复一个过时的程序结构：
+
+```sh
+sed -i '/Error loading kernel symbols/{n;n;d}' ksym_mod.c
+sed -i 's/union wait/int/' syslogd.c
+```
+
+编译并安装软件包
+
+```sh
+time { make && make BINDIR=/sbin install; }
+
+# 安装完成后输出以下信息:
+
+```
+
+#### 8.74.2 配置 Sysklogd
+
+通过运行以下命令创建一个新的 `/etc/syslog.conf` 文件：
+
+```sh
+cat > /etc/syslog.conf << "EOF"
+# Begin /etc/syslog.conf
+
+auth,authpriv.* -/var/log/auth.log
+*.*;auth,authpriv.none -/var/log/sys.log
+daemon.* -/var/log/daemon.log
+kern.* -/var/log/kern.log
+mail.* -/var/log/mail.log
+user.* -/var/log/user.log
+*.emerg *
+
+# End /etc/syslog.conf
+EOF
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.75 安装 Sysvinit-2.97
+
+Sysvinit 包含用于控制系统启动、运行和关闭的程序。
+
+解压软件包
+
+```sh
+
+```
+
+首先应用一个补丁来删除其他包安装的几个程序，澄清一条消息，并修复一个编译器警告：
+
+```sh
+patch -Np1 -i ../sysvinit-2.97-consolidated-1.patch
+```
+
+编译并安装软件包
+
+```sh
+time { make && make install; }
+
+# 安装完成后输出以下信息:
+
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.76 关于调试符号
+
+默认情况下，大多数程序和库在编译时都包含调试符号（使用 gcc 的 -g 选项）。这意味着在调试使用调试信息编译的程序或库时，调试器不仅可以提供内存地址，还可以提供例程和变量的名称。
+
+但是，包含这些调试符号会显著扩大程序或库。以下是这些符号占用空间量的示例：
+
+* 带有调试符号的 bash 二进制文件：1200 KB
+* 没有调试符号的 bash 二进制文件：480 KB
+* 带有调试符号的 Glibc 和 GCC 文件（/lib 和/usr/lib）：87 MB
+* 不带调试符号的 Glibc 和 GCC 文件：16 MB
+
+大小可能因使用的编译器和 C 库而异，但在比较有和没有调试符号的程序时，差异通常是 2 到 5 倍之间。
+
+因为大多数用户永远不会在他们的系统软件上使用调试器，所以通过删除这些符号可以重新获得大量磁盘空间。下一节将展示如何从程序和库中去除所有调试符号。
+
+### 8.77 移除调试符号
+
+**本节是可选的**。如果目标用户不是程序员并且不打算对系统软件进行任何调试，则通过从二进制文件和库中删除调试符号，可以将系统大小减少约 2 GB。**除了无法再完全调试软件之外，这不会造成任何不便**。
+
+大多数使用下面提到的命令的人不会遇到任何困难。但是，很容易打错字并使新系统无法使用，因此在运行 strip 命令之前，**最好在当前状态下备份 LFS 系统**。
+
+首先将所选库的调试符号放在单独的文件中。如果稍后在 BLFS 中运行使用 valgrind 或 gdb 的回归测试，则需要此调试信息。
+
+‼️ **强烈建议在进行下面的步骤前，先使用 *快照* 备份你的虚拟机！**
+
+```sh
+save_lib="ld-2.32.so libc-2.32.so libpthread-2.32.so libthread_db-1.0.so"
+
+cd /lib
+
+for LIB in $save_lib; do
+    objcopy --only-keep-debug $LIB $LIB.dbg 
+    strip --strip-unneeded $LIB
+    objcopy --add-gnu-debuglink=$LIB.dbg $LIB 
+done    
+
+save_usrlib="libquadmath.so.0.0.0 libstdc++.so.6.0.28
+             libitm.so.1.0.0 libatomic.so.1.2.0" 
+
+cd /usr/lib
+
+for LIB in $save_usrlib; do
+    objcopy --only-keep-debug $LIB $LIB.dbg
+    strip --strip-unneeded $LIB
+    objcopy --add-gnu-debuglink=$LIB.dbg $LIB
+done
+
+unset LIB save_lib save_usrlib
+```
+
+现在可以移除调试符号：
+
+```sh
+find /usr/lib -type f -name \*.a \
+   -exec strip --strip-debug {} ';'
+
+find /lib /usr/lib -type f -name \*.so* ! -name \*dbg \
+   -exec strip --strip-unneeded {} ';'
+
+find /{bin,sbin} /usr/{bin,sbin,libexec} -type f \
+    -exec strip --strip-all {} ';'
+```
+
+大量文件将被报告为**无法识别其文件格式**。这些警告可以安全地**忽略**。这些警告表明这些文件是脚本而不是二进制文件。
+
+### 8.78 清理
+
+现在，可以使用 `df -h /mnt/lfs` 查看一下磁盘所占用的空间，以便于清理之后进行对比。
+
+```sh
+df -h /mnt/lfs
+```
+
+最后，清理运行测试留下的一些额外文件：
+
+```sh
+rm -rf /tmp/*
+```
+
+现在注销并使用新的 chroot 命令重新进入 chroot 环境。从现在开始，在退出后需要重新进入 chroot 环境时，退出之后请使用下面新的 chroot 命令：
+
+如果虚拟内核文件系统已被卸载（手动或通过重新引导），**请确保在重新进入 chroot 时已安装虚拟内核文件系统**。此过程在 第7.3.2节-安装和填充/dev 和 第7.3.3节-安装虚拟内核文件系统 中进行了解释。
+
+```sh
+# 退出 chroot 环境
+logout
+# 使用新的命令进入 chroot 环境
+chroot "$LFS" /usr/bin/env -i          \
+    HOME=/root TERM="$TERM"            \
+    PS1='(lfs chroot) \u:\w\$ '        \
+    PATH=/bin:/usr/bin:/sbin:/usr/sbin \
+    /bin/bash --login
+```
+
+这里不再使用 +h 选项，因为所有以前的程序都已被替换：因此可以进行散列。
+
+为了满足几个包中的回归测试，本章前面没有抑制几个静态库。这些库来自 binutils、bzip2、e2fsprogs、flex、libtool 和 zlib。如果需要，现在可以删除它们：
+
+```sh
+rm -f /usr/lib/lib{bfd,opcodes}.a
+rm -f /usr/lib/libctf{,-nobfd}.a
+rm -f /usr/lib/libbz2.a
+rm -f /usr/lib/lib{com_err,e2p,ext2fs,ss}.a
+rm -f /usr/lib/libltdl.a
+rm -f /usr/lib/libfl.a
+rm -f /usr/lib/libz.a
+```
+
+在 `/usr/lib` 和 `/usr/libexec` 目录中还安装了几个文件扩展名为 `.la` 的文件。这些是 "libtool 归档" 文件。如前所述，它们仅在与静态库链接时才有用。当使用动态共享库时，尤其是在使用非自动工具构建系统时，它们是不需要的，并且可能有害。要删除它们，请运行：
+
+```sh
+find /usr/lib /usr/libexec -name \*.la -delete
+```
+
+有关 libtool 存档文件的更多信息，请参阅 BLFS 部分 "关于 Libtool 存档 (.la) 文件" 。
+
+第 6 章和第 7 章中构建的编译器仍然部分安装，不再需要。删除它：
+
+```sh
+find /usr -depth -name $(uname -m)-lfs-linux-gnu\* | xargs rm -rf
+```
+
+也可以删除 `/tools` 目录以进一步获得一些空间：
+
+```sh
+rm -rf /tools
+```
+
+最后，删除在上一章开头创建的临时 `tester` 用户帐户。
+
+```sh
+userdel -r tester
+```
+
+系统清理终于结束了！！
+
+现在，可以使用 `df -h /mnt/lfs` 查看一下磁盘所占用的空间。
+
+**强烈建议再次使用 *快照功能* 进行备份**。
+
+## 第九章 系统配置
+
+### 9.1 概述
+
+引导 Linux 系统涉及多项任务。该进程必须挂载虚拟和真实文件系统，初始化设备，激活交换，检查文件系统的完整性，设置系统时钟，启动网络，启动系统所需的任何守护程序，并完成用户所需的任何其他自定义任务。必须组织此过程以确保以正确的顺序执行任务，但同时尽可能快地执行。
+
+#### 9.1.1 System V
+
+System V 是经典的引导过程，自 1983 年以来一直在 Unix 和类 Unix 系统（如 Linux）中使用。它由一个小程序 init 组成，它设置诸如 login（通过 getty）之类的基本程序并运行一个脚本。该脚本通常名为 rc，控制一组附加脚本的执行，这些脚本执行初始化系统所需的任务。
+
+init 程序由 /etc/inittab 文件控制，并组织成用户可以运行的运行级别：
+
+* 0 — 停止
+* 1 — 单用户模式
+* 2 — 多用户且无网络
+* 3 — 完整的多用户模式
+* 4 — 用户可定义
+* 5 — 带显示管理器的完整多用户模式
+* 6 — 重新启动
+
+通常的默认运行级别是 3 或 5。
+
+优点：
+
+* 制度完善，人尽皆知
+* 易于定制
+
+缺点：
+
+* 启动速度可能较慢。中速基本 LFS 系统需要 8-12 秒，其中引导时间是从第一条内核消息到登录提示进行测量的。网络连接通常在登录提示后约 2 秒建立。
+* 启动任务是串行处理的。上一点与有此关，任何进程（例如文件系统检查）的延迟都会延迟整个启动过程。
+* 不直接支持控制组 (cgroups) 和每用户公平共享调度等高级功能。
+* 添加脚本需要手动、静态的排序决策。
+
+### 9.2 LFS-Bootscripts-20200818
+
+LFS-Bootscripts 包含一组在启动/关闭时启动/停止 LFS 系统的脚本。以下部分描述了自定义引导过程所需的配置文件和过程。
+
+解压软件包
+
+```sh
+
+```
+
+安装软件包
+
+```sh
+make install
+```
+
+### 9.3 设备和模块处理概述
+
+在第 8 章中，我们在构建 eudev 时安装了 udev 包。在我们深入了解其工作原理之前，先简要介绍一下以前处理设备的方法。
+
+Linux 系统传统上使用静态设备创建方法，即在 /dev 下创建大量设备节点（有时实际上是数千个节点），而不管相应的硬件设备是否真的存在。这通常是通过 MAKEDEV 脚本完成的，该脚本包含对 mknod 程序的多次调用，以及世界上可能存在的每个可能设备的相关主设备号和次设备号。
+
+现在，使用 udev 方法，只有那些被内核检测到的设备才会为它们创建设备节点。由于每次系统启动时都会创建这些设备节点，因此它们将存储在 devtmpfs 文件系统（完全驻留在系统内存中的虚拟文件系统）中。设备节点不需要太多空间，因此使用的内存可以忽略不计。
+
+#### 9.3.1 历史
+
+2000 年 2 月，一个名为 devfs 的新文件系统被合并到 2.3.46 内核中，并在 2.4 系列稳定内核期间可用。尽管它存在于内核源代码中，但这种动态创建设备的方法从未得到核心内核开发人员的压倒性支持。
+
+devfs 采用的方法的**主要问题**是它处理设备检测、创建和命名的方式。另一个问题，即设备节点命名问题，可能是最关键的。人们普遍认为，如果允许设备名称可配置，那么设备命名策略应该由系统管理员决定，而不是由任何特定的开发人员强加给他们。devfs 文件系统还受到其设计固有的竞争条件的影响，如果不对内核进行实质性修改就无法修复。由于缺乏维护，它被标记为已弃用很长一段时间，最终于 2006 年 6 月从内核中删除。
+
+随着不稳定的 2.5 内核树（后来作为 2.6 系列稳定内核发布）的开发，一个名为 sysfs 的新虚拟文件系统应运而生。sysfs 的工作是将系统硬件配置的视图导出到用户空间进程。通过这种用户空间可见的表示，开发用户空间替代 devfs 的可能性变得更加现实。
+
+#### 9.3.2 Udev 实现
+
+##### 9.3.2.1 Sysfs
+
+sysfs 文件系统在上面简要提到过。人们可能想知道 sysfs 如何知道系统上存在的设备以及应该为它们使用哪些设备编号。已编译到内核中的驱动程序在内核检测到它们时直接向 sysfs（内部 devtmpfs）注册它们的对象。对于编译为模块的驱动程序，此注册将在加载模块时发生。一旦 sysfs 文件系统被挂载（在 /sys 上），驱动程序向 sysfs 注册的数据可供用户空间进程和 udevd 处理（包括对设备节点的修改）。
+
+##### 9.3.2.2 设备节点的创建
+
+设备文件由内核通过devtmpfs文件系统创建。任何希望注册设备节点devtmpfs的驱动程序都将通过 （通过驱动程序核心）来完成。当devtmpfs实例安装在 上时 /dev，设备节点最初将使用固定名称、权限和所有者创建。
+
+不久之后，内核将向udevd发送一个 uevent 。基于在内的文件中指定的规则/etc/udev/rules.d，/lib/udev/rules.d和/run/udev/rules.d目录， udevd会将创建的符号链接附加到该设备节点，或改变它的权限，拥有者，或基，或修改内部 的udevd 该对象数据库条目（名称）。
+
+这三个目录中的规则被编号，并且所有三个目录合并在一起。如果udevd找不到它正在创建的设备的规则，它将保留devtmpfs最初使用的权限和所有权。
+
+##### 9.3.2.3 模块加载
+
+编译为模块的设备驱动程序可能具有内置的别名。别名在modinfo 程序的输出中可见， 通常与模块支持的设备的总线特定标识符相关。例如，snd-fm801驱动程序支持供应商 ID 为 0x1319 和设备 ID 为 0x0801 的 PCI 设备，其别名为“ pci:v00001319d00000801sv*sd*bc04sc01i* ”。对于大多数设备，总线驱动程序导出将通过sysfs. 例如，/sys/bus/pci/devices/0000:00:0d.0/modalias 文件可能包含字符串"pci:v00001319d00000801sv00001319sd00001319bc04sc01i00"。udev 提供的默认规则会导致 udevd使用uevent 环境变量的内容（应该与sysfs中的文件内容相同）调用/sbin/modprobe，从而加载别名与此字符串匹配的所有模块通配符扩展后。 MODALIASmodalias
+
+在这个例子中，这意味着，除了 snd-fm801 之外，如果有过时的（和不需要的）forte驱动程序，它就会被加载。请参阅下文，了解可以防止加载不需要的驱动程序的方法。
+
+内核本身也能够按需加载网络协议、文件系统和 NLS 支持的模块。
+
+##### 9.3.2.4 处理热插拔/动态设备
+
+当您插入一个设备时，例如通用串行总线 (USB) MP3 播放器，内核会识别出该设备现在已连接并生成一个 uevent。这个 uevent 然后由udevd处理，如上所述。
+
+#### 9.3.3 加载模块和创建设备的问题
+
+自动创建设备节点时可能会出现一些问题。
+
+##### 9.3.3.1 内核模块不会自动加载
+
+如果模块具有特定于总线的别名并且总线驱动程序正确地将必要的别名导出到sysfs. 在其他情况下，应通过其他方式安排模块加载。在 Linux-5.8.3 中，udev 可以为 INPUT、IDE、PCI、USB、SCSI、SERIO 和 FireWire 设备加载正确编写的驱动程序。
+
+要确定您需要的设备驱动程序是否具有对 udev 的必要支持，请使用模块名称作为参数运行modinfo。现在尝试定位下面的设备目录/sys/bus并检查那里是否有modalias 文件。
+
+如果modalias文件存在于 中sysfs，则驱动程序支持该设备并可以直接与之对话，但没有别名，这是驱动程序中的错误。在没有 udev 帮助的情况下加载驱动程序，并期望稍后修复该问题。
+
+如果modalias下相关目录中没有文件，则/sys/bus说明内核开发人员尚未为此总线类型添加模别名支持。对于 Linux-5.8.3，ISA 总线就是这种情况。预计此问题将在以后的内核版本中得到修复。
+
+Udev 根本不打算加载诸如 snd-pcm-oss 之类的“包装器”驱动程序 和诸如loop 之类的非硬件驱动程序。
+
+##### 9.3.3.2 内核模块不会自动加载，并且 udev 不打算加载它
+
+如果“ wrapper ”模块只是增强了其他模块提供的功能（例如， snd-pcm-oss通过使声卡可用于 OSS 应用程序来增强snd-pcm的功能），请配置 modprobe在 udev 加载后加载包装器包裹的模块。为此，请在相应的 文件中添加“ softdep ”行。例如： /etc/modprobe.d/<filename>.conf
+
+```sh
+softdep snd-pcm post: snd-pcm-oss
+```
+
+注意，“ softdep ”命令也允许 pre:依赖关系，或两者的混合物pre:和 post:依赖关系。有关“ softdep ”语法和功能的modprobe.d(5)更多信息，请参阅 手册页。
+
+如果有问题的模块不是包装器并且本身很有用，请配置模块引导脚本以在系统引导时加载此模块。为此，请将模块名称添加到/etc/sysconfig/modules文件的单独行中。这也适用于包装器模块，但在这种情况下是次优的。
+
+##### 9.3.3.3 Udev 加载了一些不需要的模块
+要么不构建模块，要么/etc/modprobe.d/blacklist.conf像 下面示例中的forte模块那样将其列入黑名单 ：
+
+```sh
+blacklist forte
+```
+
+仍然可以使用显式modprobe命令手动加载列入黑名单的模块。
+
+##### 9.3.3.4 Udev 错误地创建了设备，或创建了错误的符号链接
+
+如果规则意外匹配设备，通常会发生这种情况。例如，编写不当的规则可能会匹配 SCSI 磁盘（根据需要）和供应商对应的 SCSI 通用设备（错误地）。在udevadm info命令的帮助下，找出违规规则并使其更加具体。
+
+##### 9.3.3.5 Udev 规则不可靠
+
+这可能是之前问题的另一种表现。如果不是，并且您的规则使用sysfs属性，则可能是内核计时问题，将在以后的内核中修复。现在，您可以通过创建等待使用的sysfs属性并将其附加到/etc/udev/rules.d/10-wait_for_sysfs.rules 文件的规则来解决它（如果该文件不存在，则创建该文件）。如果您这样做，请通知 LFS 开发列表，这会有所帮助。
+
+##### 9.3.3.6 udev 不创建设备
+
+进一步的文本假设驱动程序是静态构建到内核中的或已经作为模块加载的，并且您已经检查过 udev 没有创建错误命名的设备。
+
+如果内核驱动程序不将其数据导出到sysfs. 这在内核树之外的第三方驱动程序中最为常见。/lib/udev/devices使用适当的主要/次要编号创建静态设备节点（请参阅devices.txt内核文档中的文件或第三方驱动程序供应商提供的文档）。静态设备节点将被复制到/dev由udev的。
+
+##### 9.3.3.7 重启后设备命名顺序随机变化
+
+这是因为 udev 按照设计并行处理 uevent 和加载模块，因此顺序不可预测。这永远不会“固定”。您不应依赖内核设备名称的稳定性。相反，创建您自己的规则，根据设备的某些稳定属性（例如序列号或 udev 安装的各种 *_id 实用程序的输出）使用稳定名称创建符号链接。有关示例，请参见第 9.4 节“管理设备”和第 9.5 节“常规网络配置”。
+
+#### 9.3.4. 有用的阅读
+
+以下站点提供了其他有用的文档：
+
+* devfs 的用户空间实现 http://www.kroah.com/linux/talks/ols_2003_udev_paper/Reprint-Kroah-Hartman-OLS2003.pdf
+
+* sysfs文件系统 http://www.kernel.org/pub/linux/kernel/people/mochel/doc/papers/ols-2005/mochel.pdf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
