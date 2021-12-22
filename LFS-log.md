@@ -3647,37 +3647,1886 @@ renamed '/usr/lib/libz.so.1.2.11' -> '/lib/libz.so.1.2.11'
 '/usr/lib/libz.so' -> '../../lib/libz.so.1.2.11'
 ```
 
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/zlib-1.2.11# cd ..
+(lfs chroot) root:/sources# rm -rf zlib-1.2.11
+```
+
 ### 8.10 安装 Bzip2-1.0.8
 
 Bzip2 包包含用于压缩和解压缩文件的程序。使用 bzip2 压缩文本文件比使用传统 gzip 产生更好的压缩百分比。
 
+解压软件包
 
+```sh
+(lfs chroot) root:/sources# tar xf bzip2-1.0.8.tar.gz 
+(lfs chroot) root:/sources# cd bzip2-1.0.8
+```
 
+应用一个补丁来安装这个包的文档：
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# patch -Np1 -i ../bzip2-1.0.8-install_docs-1.patch
+patching file Makefile
+```
 
+以下命令确保符号链接的安装是相对的：
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# sed -i 's@\(ln -s -f \)$(PREFIX)/bin/@\1@' Makefile
+```
 
+确保手册页安装到正确的位置：
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# sed -i "s@(PREFIX)/man@(PREFIX)/share/man@g" Makefile
+```
 
+准备配置
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# make -f Makefile-libbz2_so
+(lfs chroot) root:/sources/bzip2-1.0.8# make clean
 
+# 完成后输出以下信息：
+rm -f *.o libbz2.a bzip2 bzip2recover \
+sample1.rb2 sample2.rb2 sample3.rb2 \
+sample1.tst sample2.tst sample3.tst
+(lfs chroot) root:/sources/bzip2-1.0.8# 
+```
 
+编译并安装 (大约耗时5秒)
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# time { make && make PREFIX=/usr install; }
 
+# 编译安装完成后输出信息：
+cp -f manual.ps /usr/share/doc/bzip2-1.0.8
+cp -f bzip2.txt /usr/share/doc/bzip2-1.0.8
+chmod a+r /usr/share/doc/bzip2-1.0.8/manual.html
+chmod a+r /usr/share/doc/bzip2-1.0.8/manual.pdf
+chmod a+r /usr/share/doc/bzip2-1.0.8/manual.ps
+chmod a+r /usr/share/doc/bzip2-1.0.8/bzip2.txt
 
+real    0m6.787s
+user    0m6.069s
+sys     0m0.543s
+```
 
+将共享的 bzip2 二进制文件安装到 /bin 目录中，制作一些必要的符号链接，并进行清理：
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# cp -v bzip2-shared /bin/bzip2
+'bzip2-shared' -> '/bin/bzip2'
+(lfs chroot) root:/sources/bzip2-1.0.8# cp -av libbz2.so* /lib
+'libbz2.so.1.0' -> '/lib/libbz2.so.1.0'
+'libbz2.so.1.0.8' -> '/lib/libbz2.so.1.0.8'
+(lfs chroot) root:/sources/bzip2-1.0.8# ln -sv ../../lib/libbz2.so.1.0 /usr/lib/libbz2.so
+'/usr/lib/libbz2.so' -> '../../lib/libbz2.so.1.0'
+(lfs chroot) root:/sources/bzip2-1.0.8# rm -v /usr/bin/{bunzip2,bzcat,bzip2}
+removed '/usr/bin/bunzip2'
+removed '/usr/bin/bzcat'
+removed '/usr/bin/bzip2'
+(lfs chroot) root:/sources/bzip2-1.0.8# ln -sv bzip2 /bin/bunzip2
+'/bin/bunzip2' -> 'bzip2'
+(lfs chroot) root:/sources/bzip2-1.0.8# ln -sv bzip2 /bin/bzcat
+'/bin/bzcat' -> 'bzip2'
+```
 
+清理安装包
 
+```sh
+(lfs chroot) root:/sources/bzip2-1.0.8# cd ..
+(lfs chroot) root:/sources# rm -rf bzip2-1.0.8
+```
 
+### 8.11 安装 Xz-5.2.5
 
+Xz 包含用于压缩和解压缩文件的程序。它为 lzma 和较新的 xz 压缩格式提供了功能。使用 xz 压缩文本文件比使用传统的 gzip 或 bzip2 命令产生更好的压缩百分比。
 
+解压软件包
 
+```sh
+(lfs chroot) root:/sources# tar xf xz-5.2.5.tar.xz 
+(lfs chroot) root:/sources# cd xz-5.2.5
+```
 
+配置并编译检查 (大约耗时1分钟)
 
+```sh
+time { ./configure --prefix=/usr  \
+            --disable-static      \
+            --docdir=/usr/share/doc/xz-5.2.5 && make && make check; }
 
+# 检查完成后输出信息：
+==================
+All 9 tests passed
+==================
+make[2]: Leaving directory '/sources/xz-5.2.5/tests'
+make[1]: Leaving directory '/sources/xz-5.2.5/tests'
+make[1]: Entering directory '/sources/xz-5.2.5'
+make[1]: Leaving directory '/sources/xz-5.2.5'
 
+real    0m57.326s
+user    0m41.632s
+sys     0m12.493s
+```
 
+安装软件包 (大约耗时2秒)：
+
+```sh
+(lfs chroot) root:/sources/xz-5.2.5# time { make install; }
+
+# 安装完成后的输出：
+make[2]: Leaving directory '/sources/xz-5.2.5'
+make[1]: Leaving directory '/sources/xz-5.2.5'
+
+real    0m2.158s
+user    0m1.387s
+sys     0m0.602s
+```
+
+确保所有基本文件都在正确的目录中：
+
+```sh
+(lfs chroot) root:/sources/xz-5.2.5# mv -v /usr/bin/{lzma,unlzma,lzcat,xz,unxz,xzcat} /bin
+renamed '/usr/bin/lzma' -> '/bin/lzma'
+renamed '/usr/bin/unlzma' -> '/bin/unlzma'
+renamed '/usr/bin/lzcat' -> '/bin/lzcat'
+renamed '/usr/bin/xz' -> '/bin/xz'
+renamed '/usr/bin/unxz' -> '/bin/unxz'
+renamed '/usr/bin/xzcat' -> '/bin/xzcat'
+(lfs chroot) root:/sources/xz-5.2.5# mv -v /usr/lib/liblzma.so.* /lib
+renamed '/usr/lib/liblzma.so.5' -> '/lib/liblzma.so.5'
+renamed '/usr/lib/liblzma.so.5.2.5' -> '/lib/liblzma.so.5.2.5'
+(lfs chroot) root:/sources/xz-5.2.5# ln -svf ../../lib/$(readlink /usr/lib/liblzma.so) /usr/lib/liblzma.so
+'/usr/lib/liblzma.so' -> '../../lib/liblzma.so.5.2.5'
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/xz-5.2.5# cd ..
+(lfs chroot) root:/sources# rm -rf xz-5.2.5
+```
+
+### 8.12 安装 Zstd-1.4.5
+
+Zstandard 是一种实时压缩算法，提供高压缩率。它提供了非常广泛的压缩/速度权衡，同时由非常快速的解码器提供支持。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf zstd-1.4.5.tar.gz 
+(lfs chroot) root:/sources# cd zstd-1.4.5
+```
+
+编译并安装 (大约耗时2分钟)
+
+```sh
+(lfs chroot) root:/sources/zstd-1.4.5# time { make && make prefix=/usr install; }
+
+# 安装完成后输出信息：
+creating versioned links
+Installing shared library
+Installing includes
+zstd static and shared library installed
+make[1]: Leaving directory '/sources/zstd-1.4.5/lib'
+make[1]: Entering directory '/sources/zstd-1.4.5/programs'
+Installing binaries
+Installing man pages
+zstd installation completed
+make[1]: Leaving directory '/sources/zstd-1.4.5/programs'
+
+real    2m37.485s
+user    2m31.136s
+sys     0m4.358s
+```
+
+删除静态库并将共享库移动到 /lib。此外，/usr/lib 中的 .so 文件将需要重新创建：
+
+```sh
+(lfs chroot) root:/sources/zstd-1.4.5# rm -v /usr/lib/libzstd.a
+removed '/usr/lib/libzstd.a'
+(lfs chroot) root:/sources/zstd-1.4.5# mv -v /usr/lib/libzstd.so.* /lib
+renamed '/usr/lib/libzstd.so.1' -> '/lib/libzstd.so.1'
+renamed '/usr/lib/libzstd.so.1.4.5' -> '/lib/libzstd.so.1.4.5'
+(lfs chroot) root:/sources/zstd-1.4.5# ln -sfv ../../lib/$(readlink /usr/lib/libzstd.so) /usr/lib/libzstd.so
+'/usr/lib/libzstd.so' -> '../../lib/libzstd.so.1.4.5'
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/zstd-1.4.5# cd ..
+(lfs chroot) root:/sources# rm -rf zstd-1.4.5
+```
+
+### 8.13 安装 File-5.39
+
+File 包含一个用于确定给定文件或文件类型的实用程序。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf file-5.39.tar.gz 
+(lfs chroot) root:/sources# cd file-5.39
+```
+
+配置编译并检查 (大约耗时30秒)
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完后的输出信息：
+make[2]: Leaving directory '/sources/file-5.39/tests'
+make[1]: Leaving directory '/sources/file-5.39/tests'
+Making check in doc
+make[1]: Entering directory '/sources/file-5.39/doc'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/file-5.39/doc'
+Making check in python
+make[1]: Entering directory '/sources/file-5.39/python'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/file-5.39/python'
+make[1]: Entering directory '/sources/file-5.39'
+make[1]: Leaving directory '/sources/file-5.39'
+
+real    0m28.106s
+user    0m19.706s
+sys     0m6.196s
+```
+
+安装软件包
+
+```sh
+(lfs chroot) root:/sources/file-5.39# time { make install; }
+
+# 安装后的输出信息：
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/file-5.39'
+make[1]: Leaving directory '/sources/file-5.39'
+
+real    0m0.566s
+user    0m0.383s
+sys     0m0.140s
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/file-5.39# cd ..
+(lfs chroot) root:/sources# rm -rf file-5.39
+```
+
+### 8.14 安装 Readline-8.0
+
+Readline 包是一组提供命令行编辑和历史记录功能的库。
+
+安装软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf readline-8.0.tar.gz 
+(lfs chroot) root:/sources# cd readline-8.0
+```
+
+重新安装 Readline 将导致旧库移动到 <libraryname>.old。虽然这通常不是问题，但在某些情况下，它可能会触发 ldconfig 中的链接错误。这可以通过发出以下两个 sed 来避免：
+
+```sh
+(lfs chroot) root:/sources/readline-8.0# sed -i '/MV.*old/d' Makefile.in
+(lfs chroot) root:/sources/readline-8.0# sed -i '/{OLDSUFF}/c:' support/shlib-install
+```
+
+配置并编译安装 (大约耗时20秒)
+
+```sh
+time { ./configure --prefix=/usr   \
+            --disable-static       \
+            --with-curses          \
+            --docdir=/usr/share/doc/readline-8.0 && make SHLIB_LIBS="-lncursesw" && make SHLIB_LIBS="-lncursesw" install; }
+
+# 安装完成后输出信息：
+make[1]: Entering directory '/sources/readline-8.0/shlib'
+/bin/sh ../support/mkdirs /usr/lib
+/bin/sh ../support/mkdirs /usr/bin
+/bin/sh ../support/shlib-install -O linux-gnu -V pc -d /usr/lib -b /usr/bin -i "/usr/bin/install -c -m 644" libhistory.so.8.0
+/bin/sh ../support/shlib-install -O linux-gnu -V pc -d /usr/lib -b /usr/bin -i "/usr/bin/install -c -m 644" libreadline.so.8.0
+install: you may need to run ldconfig
+make[1]: Leaving directory '/sources/readline-8.0/shlib'
+
+real    0m20.950s
+user    0m14.657s
+sys     0m4.554s
+```
+
+现在将动态库移动到更合适的位置并修复一些权限和符号链接：
+
+```sh
+(lfs chroot) root:/sources/readline-8.0# mv -v /usr/lib/lib{readline,history}.so.* /lib
+renamed '/usr/lib/libreadline.so.8' -> '/lib/libreadline.so.8'
+renamed '/usr/lib/libreadline.so.8.0' -> '/lib/libreadline.so.8.0'
+renamed '/usr/lib/libhistory.so.8' -> '/lib/libhistory.so.8'
+renamed '/usr/lib/libhistory.so.8.0' -> '/lib/libhistory.so.8.0'
+(lfs chroot) root:/sources/readline-8.0# chmod -v u+w /lib/lib{readline,history}.so.*
+mode of '/lib/libreadline.so.8' retained as 0755 (rwxr-xr-x)
+mode of '/lib/libreadline.so.8.0' retained as 0755 (rwxr-xr-x)
+mode of '/lib/libhistory.so.8' retained as 0755 (rwxr-xr-x)
+mode of '/lib/libhistory.so.8.0' retained as 0755 (rwxr-xr-x)
+(lfs chroot) root:/sources/readline-8.0# ln -sfv ../../lib/$(readlink /usr/lib/libreadline.so) /usr/lib/libreadline.so
+'/usr/lib/libreadline.so' -> '../../lib/libreadline.so.8'
+(lfs chroot) root:/sources/readline-8.0# ln -sfv ../../lib/$(readlink /usr/lib/libhistory.so ) /usr/lib/libhistory.so
+'/usr/lib/libhistory.so' -> '../../lib/libhistory.so.8'
+```
+
+如果需要，请安装文档：
+
+```sh
+(lfs chroot) root:/sources/readline-8.0# install -v -m644 doc/*.{ps,pdf,html,dvi} /usr/share/doc/readline-8.0
+'doc/history.ps' -> '/usr/share/doc/readline-8.0/history.ps'
+'doc/history_3.ps' -> '/usr/share/doc/readline-8.0/history_3.ps'
+'doc/readline.ps' -> '/usr/share/doc/readline-8.0/readline.ps'
+'doc/readline_3.ps' -> '/usr/share/doc/readline-8.0/readline_3.ps'
+'doc/rluserman.ps' -> '/usr/share/doc/readline-8.0/rluserman.ps'
+'doc/history.pdf' -> '/usr/share/doc/readline-8.0/history.pdf'
+'doc/readline.pdf' -> '/usr/share/doc/readline-8.0/readline.pdf'
+'doc/rluserman.pdf' -> '/usr/share/doc/readline-8.0/rluserman.pdf'
+'doc/history.html' -> '/usr/share/doc/readline-8.0/history.html'
+'doc/readline.html' -> '/usr/share/doc/readline-8.0/readline.html'
+'doc/rluserman.html' -> '/usr/share/doc/readline-8.0/rluserman.html'
+'doc/history.dvi' -> '/usr/share/doc/readline-8.0/history.dvi'
+'doc/readline.dvi' -> '/usr/share/doc/readline-8.0/readline.dvi'
+'doc/rluserman.dvi' -> '/usr/share/doc/readline-8.0/rluserman.dvi'
+```
+
+清除安装包
+
+```sh
+(lfs chroot) root:/sources/readline-8.0# cd ..
+(lfs chroot) root:/sources# rm -rf readline-8.0
+```
+
+### 8.15 安装 M4-1.4.18
+
+M4 封装包含一个宏处理器。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf m4-1.4.18.tar.xz 
+(lfs chroot) root:/sources# cd m4-1.4.18
+```
+
+首先执行 glibc-2.28 及更高版本所需的一些修复：
+
+```sh
+(lfs chroot) root:/sources/m4-1.4.18# sed -i 's/IO_ftrylockfile/IO_EOF_SEEN/' lib/*.c
+(lfs chroot) root:/sources/m4-1.4.18# echo "#define _IO_IN_BACKUP 0x100" >> lib/stdio-impl.h
+```
+
+配置编译并检查
+
+```sh
+(lfs chroot) root:/sources/m4-1.4.18# time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后输出信息：
+============================================================================
+Testsuite summary for GNU M4 1.4.18
+============================================================================
+# TOTAL: 170
+# PASS:  157
+# SKIP:  13
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[6]: Leaving directory '/sources/m4-1.4.18/tests'
+make[5]: Leaving directory '/sources/m4-1.4.18/tests'
+make[4]: Leaving directory '/sources/m4-1.4.18/tests'
+make[3]: Leaving directory '/sources/m4-1.4.18/tests'
+make[2]: Leaving directory '/sources/m4-1.4.18/tests'
+make[1]: Leaving directory '/sources/m4-1.4.18'
+
+real    1m51.158s
+user    1m10.888s
+sys     0m22.973s
+```
+
+安装软件包
+
+```sh
+(lfs chroot) root:/sources/m4-1.4.18# time { make install; }
+
+# 安装完成后输出信息：
+make[4]: Entering directory '/sources/m4-1.4.18/tests'
+make[5]: Entering directory '/sources/m4-1.4.18/tests'
+make[5]: Nothing to be done for 'install-exec-am'.
+make[5]: Nothing to be done for 'install-data-am'.
+make[5]: Leaving directory '/sources/m4-1.4.18/tests'
+make[4]: Leaving directory '/sources/m4-1.4.18/tests'
+make[3]: Leaving directory '/sources/m4-1.4.18/tests'
+make[2]: Leaving directory '/sources/m4-1.4.18/tests'
+make[1]: Leaving directory '/sources/m4-1.4.18'
+
+real    0m1.232s
+user    0m0.868s
+sys     0m0.193s
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/m4-1.4.18# cd ..
+(lfs chroot) root:/sources# rm -rf m4-1.4.18
+```
+
+### 8.16 安装 Bc-3.1.5
+
+Bc 包含一种任意精度的数字处理语言。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf bc-3.1.5.tar.xz 
+(lfs chroot) root:/sources# cd bc-3.1.5
+```
+
+配置编译并检查
+
+```sh
+time { PREFIX=/usr CC=gcc CFLAGS="-std=c99" ./configure.sh -G -O3 && make && make test; }
+
+# 检查完成后输出信息：
+Running dc binary file test...pass
+Running dc binary stdin test...pass
+
+All dc tests passed.
+
+***********************************************************************
+
+real    0m12.970s
+user    0m10.569s
+sys     0m2.186s
+```
+
+安装软件包
+
+```sh
+(lfs chroot) root:/sources/bc-3.1.5# time { make install; }
+
+# 安装完成后输出信息：
+./locale_install.sh /usr/share/locale/%L/%N bc 
+./safe-install.sh -Dm644 manuals/bc.1 /usr/share/man/man1/bc.1
+./safe-install.sh -Dm644 manuals/dc.1 /usr/share/man/man1/dc.1
+./install.sh /usr/bin ""
+
+real    0m22.463s
+user    0m20.792s
+sys     0m1.293s
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/bc-3.1.5# cd ..
+(lfs chroot) root:/sources# rm -rf bc-3.1.5
+```
+
+### 8.17 安装 Flex-2.6.4
+
+Flex 包含一个实用程序，用于生成识别文本模式的程序。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf flex-2.6.4.tar.gz 
+(lfs chroot) root:/sources# cd flex-2.6.4
+```
+
+配置编译并检查
+
+```sh
+time { ./configure --prefix=/usr --docdir=/usr/share/doc/flex-2.6.4 && make && make check; }
+
+# 检查完成后输出信息：
+============================================================================
+Testsuite summary for the fast lexical analyser generator 2.6.4
+============================================================================
+# TOTAL: 114
+# PASS:  114
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/flex-2.6.4/tests'
+make[2]: Leaving directory '/sources/flex-2.6.4/tests'
+make[1]: Leaving directory '/sources/flex-2.6.4/tests'
+Making check in tools
+make[1]: Entering directory '/sources/flex-2.6.4/tools'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/flex-2.6.4/tools'
+make[1]: Entering directory '/sources/flex-2.6.4'
+make[1]: Nothing to be done for 'check-am'.
+make[1]: Leaving directory '/sources/flex-2.6.4'
+
+real    1m46.022s
+user    1m29.591s
+sys     0m13.206s
+```
+
+安装软件包
+
+```sh
+(lfs chroot) root:/sources/flex-2.6.4# time { make install; }
+
+# 安装完成后输出信息：
+make[2]: Leaving directory '/sources/flex-2.6.4'
+make[1]: Leaving directory '/sources/flex-2.6.4'
+
+real    0m0.916s
+user    0m0.586s
+sys     0m0.222s
+```
+
+一些程序还不了解 flex 并尝试运行它的前身 lex。要支持这些程序，请创建一个名为 lex 的符号链接，该链接以 lex 仿真模式运行 flex：
+
+```sh
+(lfs chroot) root:/sources/flex-2.6.4# ln -sv flex /usr/bin/lex
+'/usr/bin/lex' -> 'flex'
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/flex-2.6.4# cd ..
+(lfs chroot) root:/sources# rm -rf flex-2.6.4
+```
+
+### 8.18 安装 Binutils-2.35
+
+Binutils 包含一个链接器、一个汇编器和其他用于处理目标文件的工具。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf binutils-2.35.tar.xz 
+(lfs chroot) root:/sources# cd binutils-2.35
+```
+
+通过执行一个简单的测试来验证 PTY 在 chroot 环境中是否正常工作：
+
+```sh
+(lfs chroot) root:/sources/binutils-2.35# expect -c "spawn ls"
+spawn ls
+```
+
+此命令应输出以下内容：
+
+```sh
+spawn ls
+```
+
+相反，如果输出包含以下消息，则环境未设置为正确的 PTY 操作。在运行 Binutils 和 GCC 的测试套件之前，需要解决这个问题：
+
+```sh
+The system has no more ptys.
+Ask your system administrator to create more.
+```
+
+现在删除一个阻止测试运行到完成的测试：
+
+```sh
+(lfs chroot) root:/sources/binutils-2.35# sed -i '/@\tincremental_copy/d' gold/testsuite/Makefile.in
+```
+
+Binutils 文档建议在专用构建目录中构建 Binutils
+
+```sh
+(lfs chroot) root:/sources/binutils-2.35# mkdir -v build
+mkdir: created directory 'build'
+(lfs chroot) root:/sources/binutils-2.35# cd build/
+```
+
+配置编译并检查，本节中的 Binutils 测试套件被认为是至关重要的。在任何情况下都不要跳过它。
+
+```sh
+time { ../configure --prefix=/usr   \
+             --enable-gold          \
+             --enable-ld=default    \
+             --enable-plugins       \
+             --enable-shared        \
+             --disable-werror       \
+             --enable-64-bit-bfd    \
+             --with-system-zlib && make tooldir=/usr && make -k check; }
+
+# 检查完成后输出信息：
+make[3]: Leaving directory '/sources/binutils-2.35/build/libiberty/testsuite'
+make[2]: Leaving directory '/sources/binutils-2.35/build/libiberty'
+make[1]: Nothing to be done for 'check-target'.
+make[1]: Leaving directory '/sources/binutils-2.35/build'
+
+real    28m33.890s
+user    22m51.026s
+sys     5m18.164s
+```
+
+安装软件包
+
+```sh
+time { make tooldir=/usr install; }
+
+# 安装完成后输出信息：
+make[3]: Leaving directory '/sources/binutils-2.35/build/libctf'
+make[2]: Leaving directory '/sources/binutils-2.35/build/libctf'
+make[1]: Nothing to be done for 'install-target'.
+make[1]: Leaving directory '/sources/binutils-2.35/build'
+
+real    0m9.725s
+user    0m5.144s
+sys     0m2.868s
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/binutils-2.35/build# cd ../..
+(lfs chroot) root:/sources# rm -rf binutils-2.35
+```
+
+### 8.19 安装 GMP-6.2.0
+
+GMP 包含数学库。这些具有用于任意精度算术的有用函数。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf gmp-6.2.0.tar.xz 
+(lfs chroot) root:/sources# cd gmp-6.2.0
+```
+
+注意：如果您正在为 32 位 x86 构建，但您有一个能够运行 64 位代码的 CPU，并且您在环境中指定了 CFLAGS，配置脚本将尝试配置 64 位并失败。通过调用下面的配置命令来避免这种情况 `ABI=32 ./configure ...`(我不运行此代码)。
+
+GMP 的默认设置生成针对主机处理器优化的库。如果需要适用于能力低于宿主机 CPU 的处理器的库，可以通过运行以下命令来创建通用库：
+
+```sh
+cp -v configfsf.guess config.guess  (我不运行此代码)
+cp -v configfsf.sub   config.sub    (我不运行此代码)
+```
+
+配置编译并生成 HTML 文档
+
+```sh
+time { ./configure --prefix=/usr   \
+            --enable-cxx           \
+            --disable-static       \
+            --docdir=/usr/share/doc/gmp-6.2.0 && make && make html; }
+
+# 编译完成后输出信息：
+make[1]: Leaving directory '/sources/gmp-6.2.0/doc'
+make[1]: Entering directory '/sources/gmp-6.2.0'
+make[1]: Nothing to be done for 'html-am'.
+make[1]: Leaving directory '/sources/gmp-6.2.0'
+
+real    2m16.889s
+user    1m46.007s
+sys     0m24.619s
+```
+
+！重要：本节中的 GMP 测试套件被认为是至关重要的。在任何情况下都不要跳过它。
+
+```sh
+time { make check 2>&1 | tee gmp-check-log; }
+
+# 测试完成后输出信息：
+make[2]: Leaving directory '/sources/gmp-6.2.0/doc'
+make[2]: Entering directory '/sources/gmp-6.2.0'
+make[2]: Leaving directory '/sources/gmp-6.2.0'
+make[1]: Leaving directory '/sources/gmp-6.2.0'
+
+real    2m18.843s
+user    2m0.139s
+sys     0m14.226s
+```
+
+注意：gmp 中的代码针对构建它的处理器进行了高度优化。有时，检测处理器的代码会错误地识别系统功能，并且在使用 gmp 库的测试或其他应用程序中会出现错误并显示“非法指令”(Illegal instruction)消息。在这种情况下，应该使用选项 `--build=x86_64-unknown-linux-gnu` 重新配置 gmp 并重新构建。
+
+确保测试套件中的所有 197 个测试都通过。通过发出以下命令检查结果：
+
+```sh
+time { awk '/# PASS:/{total+=$3} ; END{print total}' gmp-check-log; }
+
+# 测试完成后输出信息：
+(lfs chroot) root:/sources/gmp-6.2.0# time { awk '/# PASS:/{total+=$3} ; END{print total}' gmp-check-log; }
+197
+
+real    0m0.003s
+user    0m0.002s
+sys     0m0.000s
+```
+
+安装软件包及其文档：
+
+```sh
+(lfs chroot) root:/sources/gmp-6.2.0# time { make install && make install-html; }
+
+# 安装完成后输出信息：
+make[1]: Leaving directory '/sources/gmp-6.2.0/doc'
+make[1]: Entering directory '/sources/gmp-6.2.0'
+make[1]: Nothing to be done for 'install-html-am'.
+make[1]: Leaving directory '/sources/gmp-6.2.0'
+
+real    0m1.319s
+user    0m0.813s
+sys     0m0.331s
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/gmp-6.2.0# cd ..
+(lfs chroot) root:/sources# rm -rf gmp-6.2.0
+```
+
+### 8.20 安装 MPFR-4.1.0
+
+MPFR 包含用于多精度数学的函数
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf mpfr-4.1.0.tar.xz 
+(lfs chroot) root:/sources# cd mpfr-4.1.0
+```
+
+配置并编译代码和 HTML 文档：
+
+```sh
+time { ./configure --prefix=/usr   \
+            --disable-static       \
+            --enable-thread-safe   \
+            --docdir=/usr/share/doc/mpfr-4.1.0 && make && make html; }
+
+# 编译完成后输出信息：
+make[1]: Leaving directory '/sources/mpfr-4.1.0/tools/bench'
+make[1]: Entering directory '/sources/mpfr-4.1.0'
+make[1]: Nothing to be done for 'html-am'.
+make[1]: Leaving directory '/sources/mpfr-4.1.0'
+
+real    1m30.510s
+user    1m9.021s
+sys     0m14.586s
+```
+
+重要：本节中的 MPFR 测试套件被认为是至关重要的。在任何情况下都不要跳过它。
+
+测试结果并确保所有测试都通过：
+
+```sh
+(lfs chroot) root:/sources/mpfr-4.1.0# time { make check; }
+
+# 测试完成后输出信息：
+============================================================================
+Testsuite summary for MPFR 4.1.0
+============================================================================
+# TOTAL: 183
+# PASS:  181
+# SKIP:  2
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/mpfr-4.1.0/tests'
+make[2]: Leaving directory '/sources/mpfr-4.1.0/tests'
+[tversion] MPFR 4.1.0
+[tversion] Compiler: GCC 10.2.0
+[tversion] C standard: __STDC__ = 1, __STDC_VERSION__ = 201710L
+[tversion] __GNUC__ = 10, __GNUC_MINOR__ = 2
+[tversion] __GLIBC__ = 2, __GLIBC_MINOR__ = 32
+[tversion] GMP: header 6.2.0, library 6.2.0
+[tversion] __GMP_CC = "gcc"
+[tversion] __GMP_CFLAGS = "-O2 -pedantic -fomit-frame-pointer -m64 -mtune=skylake -march=broadwell"
+[tversion] WinDLL: __GMP_LIBGMP_DLL = 0, MPFR_WIN_THREAD_SAFE_DLL = undef
+[tversion] MPFR_ALLOCA_MAX = 16384
+[tversion] TLS = yes, float128 = yes, decimal = no, GMP internals = no
+[tversion] Shared cache = no
+[tversion] intmax_t = yes, printf = yes, IEEE floats = yes
+[tversion] gmp_printf: hhd = yes, lld = yes, jd = yes, td = yes, Ld = yes
+[tversion] _mulx_u64 = yes
+[tversion] MPFR tuning parameters from src/x86_64/mparam.h
+[tversion] sizeof(long) = 8, sizeof(mpfr_intmax_t) = 8, sizeof(intmax_t) = 8
+[tversion] GMP_NUMB_BITS = 64, sizeof(mp_limb_t) = 8
+[tversion] Within limb: long = y/y, intmax_t = y/y
+[tversion] _MPFR_PREC_FORMAT = 3, sizeof(mpfr_prec_t) = 8
+[tversion] _MPFR_EXP_FORMAT = 3, sizeof(mpfr_exp_t) = 8
+[tversion] sizeof(mpfr_t) = 32, sizeof(mpfr_ptr) = 8
+[tversion] Precision range: [1,9223372036854775551]
+[tversion] Max exponent range: [-4611686018427387903,4611686018427387903]
+[tversion] Generic ABI code: no
+[tversion] Enable formally proven code: no
+[tversion] Locale: C
+make[1]: Leaving directory '/sources/mpfr-4.1.0/tests'
+Making check in tune
+make[1]: Entering directory '/sources/mpfr-4.1.0/tune'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/mpfr-4.1.0/tune'
+Making check in tools/bench
+make[1]: Entering directory '/sources/mpfr-4.1.0/tools/bench'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/mpfr-4.1.0/tools/bench'
+make[1]: Entering directory '/sources/mpfr-4.1.0'
+make[1]: Nothing to be done for 'check-am'.
+make[1]: Leaving directory '/sources/mpfr-4.1.0'
+
+real    2m26.550s
+user    2m3.460s
+sys     0m16.751s
+```
+
+安装软件包及其文档：
+
+```sh
+(lfs chroot) root:/sources/mpfr-4.1.0# time { make install && make install-html; }
+
+# 安装完成后输出信息：
+make[1]: Leaving directory '/sources/mpfr-4.1.0/tools/bench'
+make[1]: Entering directory '/sources/mpfr-4.1.0'
+make[1]: Nothing to be done for 'install-html-am'.
+make[1]: Leaving directory '/sources/mpfr-4.1.0'
+
+real    0m0.900s
+user    0m0.712s
+sys     0m0.148s
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/mpfr-4.1.0# cd ..
+(lfs chroot) root:/sources# rm -rf mpfr-4.1.0
+```
+
+### 8.21 安装 MPC-1.1.0
+
+MPC 包含一个用于复数算术的库，具有任意高精度和正确的结果四舍五入。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf mpc-1.1.0.tar.gz 
+(lfs chroot) root:/sources# cd mpc-1.1.0
+```
+
+配置并编译代码和 HTML 文档：
+
+```sh
+time { ./configure --prefix=/usr  \
+            --disable-static      \
+            --docdir=/usr/share/doc/mpc-1.1.0 && make && make html; }
+
+# 编译完成后输出信息：
+make[1]: Entering directory '/sources/mpc-1.1.0'
+make[1]: Nothing to be done for 'html-am'.
+make[1]: Leaving directory '/sources/mpc-1.1.0'
+
+real    0m24.260s
+user    0m17.650s
+sys     0m5.258s
+```
+
+若要测试结果，请执行：
+
+```sh
+time { make check; }
+
+# 测试完成后输出信息：
+============================================================================
+Testsuite summary for mpc 1.1.0
+============================================================================
+# TOTAL: 67
+# PASS:  67
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/mpc-1.1.0/tests'
+make[2]: Leaving directory '/sources/mpc-1.1.0/tests'
+make[1]: Leaving directory '/sources/mpc-1.1.0/tests'
+Making check in doc
+make[1]: Entering directory '/sources/mpc-1.1.0/doc'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/mpc-1.1.0/doc'
+Making check in tools
+make[1]: Entering directory '/sources/mpc-1.1.0/tools'
+Making check in bench
+make[2]: Entering directory '/sources/mpc-1.1.0/tools/bench'
+make[2]: Nothing to be done for 'check'.
+make[2]: Leaving directory '/sources/mpc-1.1.0/tools/bench'
+make[2]: Entering directory '/sources/mpc-1.1.0/tools'
+make[2]: Nothing to be done for 'check-am'.
+make[2]: Leaving directory '/sources/mpc-1.1.0/tools'
+make[1]: Leaving directory '/sources/mpc-1.1.0/tools'
+make[1]: Entering directory '/sources/mpc-1.1.0'
+make[1]: Leaving directory '/sources/mpc-1.1.0'
+
+real    0m43.931s
+user    0m37.973s
+sys     0m5.095s
+```
+
+安装软件包及其文档：
+
+```sh
+time { make install && make install-html; }
+
+# 安装完成后输出信息：
+make[1]: Entering directory '/sources/mpc-1.1.0'
+make[1]: Nothing to be done for 'install-html-am'.
+make[1]: Leaving directory '/sources/mpc-1.1.0'
+
+real    0m0.590s
+user    0m0.380s
+sys     0m0.135s
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/mpc-1.1.0# cd ..
+(lfs chroot) root:/sources# rm -rf mpc-1.1.0
+```
+
+### 8.22 安装 Attr-2.4.48
+
+attr 包含用于管理文件系统对象的扩展属性的实用程序。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf attr-2.4.48.tar.gz 
+(lfs chroot) root:/sources# cd attr-2.4.48
+```
+
+配置编译并检查，测试需要在支持扩展属性（例如 ext2、ext3 或 ext4 文件系统）的文件系统上运行：
+
+```sh
+time { ./configure --prefix=/usr   \
+            --bindir=/bin          \
+            --disable-static       \
+            --sysconfdir=/etc      \
+            --docdir=/usr/share/doc/attr-2.4.48 && make && make check; }
+
+# 编译完成后输出信息：
+============================================================================
+Testsuite summary for attr 2.4.48
+============================================================================
+# TOTAL: 2
+# PASS:  2
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/attr-2.4.48'
+make[2]: Leaving directory '/sources/attr-2.4.48'
+make[1]: Leaving directory '/sources/attr-2.4.48'
+
+real    0m11.434s
+user    0m6.737s
+sys     0m2.488s
+```
+
+安装软件包：
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+make[3]: Leaving directory '/sources/attr-2.4.48'
+make[2]: Leaving directory '/sources/attr-2.4.48'
+make[1]: Leaving directory '/sources/attr-2.4.48'
+
+real    0m0.740s
+user    0m0.472s
+sys     0m0.199s
+```
+
+共享库需要移动到 /lib，因此需要重新创建 /usr/lib 中的 .so 文件：
+
+```sh
+(lfs chroot) root:/sources/attr-2.4.48# mv -v /usr/lib/libattr.so.* /lib
+renamed '/usr/lib/libattr.so.1' -> '/lib/libattr.so.1'
+renamed '/usr/lib/libattr.so.1.1.2448' -> '/lib/libattr.so.1.1.2448'
+(lfs chroot) root:/sources/attr-2.4.48# ln -sfv ../../lib/$(readlink /usr/lib/libattr.so) /usr/lib/libattr.so
+'/usr/lib/libattr.so' -> '../../lib/libattr.so.1.1.2448'
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/attr-2.4.48# cd ..
+(lfs chroot) root:/sources# rm -rf attr-2.4.48
+```
+
+### 8.23 安装 Acl-2.2.53
+
+Acl 包含管理访问控制列表的实用程序，这些实用程序用于为文件和目录定义更细粒度的任意访问权限。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf acl-2.2.53.tar.gz 
+(lfs chroot) root:/sources# cd acl-2.2.53
+```
+
+配置并编译安装：
+
+```sh
+time { ./configure --prefix=/usr  \
+            --bindir=/bin         \
+            --disable-static      \
+            --libexecdir=/usr/lib \
+            --docdir=/usr/share/doc/acl-2.2.53 && make && make install; }
+
+# 安装完成后输出信息：
+make[2]: Leaving directory '/sources/acl-2.2.53'
+make[1]: Leaving directory '/sources/acl-2.2.53'
+
+real    0m16.168s
+user    0m12.017s
+sys     0m3.358s
+```
+
+共享库需要移动到 /lib，因此需要重新创建 /usr/lib 中的 .so 文件：
+
+```sh
+(lfs chroot) root:/sources/acl-2.2.53# mv -v /usr/lib/libacl.so.* /lib
+renamed '/usr/lib/libacl.so.1' -> '/lib/libacl.so.1'
+renamed '/usr/lib/libacl.so.1.1.2253' -> '/lib/libacl.so.1.1.2253'
+(lfs chroot) root:/sources/acl-2.2.53# ln -sfv ../../lib/$(readlink /usr/lib/libacl.so) /usr/lib/libacl.so
+'/usr/lib/libacl.so' -> '../../lib/libacl.so.1.1.2253'
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/acl-2.2.53# cd ..
+(lfs chroot) root:/sources# rm -rf acl-2.2.53
+```
+
+### 8.24 安装 Libcap-2.42
+
+Libcap 包实现了 Linux 内核中可用的 POSIX 1003.1e 功能的用户空间接口。这些功能将所有强大的 root 权限划分为一组不同的权限。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf libcap-2.42.tar.xz 
+(lfs chroot) root:/sources# cd libcap-2.42
+```
+
+禁止安装静态库：
+
+```sh
+(lfs chroot) root:/sources/libcap-2.42# sed -i '/install -m.*STACAPLIBNAME/d' libcap/Makefile
+```
+
+编译并测试
+
+```sh
+time { make lib=lib && make test; }
+
+# 测试完成后输出信息：
+hello libcap and libpsx .......... PASSED
+make[1]: Leaving directory '/sources/libcap-2.42/tests'
+make -C progs test
+make[1]: Entering directory '/sources/libcap-2.42/progs'
+make[1]: Nothing to be done for 'test'.
+make[1]: Leaving directory '/sources/libcap-2.42/progs'
+
+real    0m5.189s
+user    0m3.744s
+sys     0m0.918s
+```
+
+安装软件包
+
+```sh
+time { make lib=lib PKGCONFIGDIR=/usr/lib/pkgconfig install; }
+
+# 完成后输出信息：
+make[1]: Leaving directory '/sources/libcap-2.42/doc'
+make -C kdebug install
+make[1]: Entering directory '/sources/libcap-2.42/kdebug'
+make[1]: Nothing to be done for 'install'.
+make[1]: Leaving directory '/sources/libcap-2.42/kdebug'
+
+real    0m0.307s
+user    0m0.154s
+sys     0m0.101s
+```
+
+进行一些清理
+
+```sh
+(lfs chroot) root:/sources/libcap-2.42# chmod -v 755 /lib/libcap.so.2.42
+mode of '/lib/libcap.so.2.42' changed from 0644 (rw-r--r--) to 0755 (rwxr-xr-x)
+(lfs chroot) root:/sources/libcap-2.42# mv -v /lib/libpsx.a /usr/lib
+renamed '/lib/libpsx.a' -> '/usr/lib/libpsx.a'
+(lfs chroot) root:/sources/libcap-2.42# rm -v /lib/libcap.so
+removed '/lib/libcap.so'
+(lfs chroot) root:/sources/libcap-2.42# ln -sfv ../../lib/libcap.so.2 /usr/lib/libcap.so'/usr/lib/libcap.so' -> '../../lib/libcap.so.2'
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/libcap-2.42# cd ..
+(lfs chroot) root:/sources# rm -rf libcap-2.42
+```
+
+### 8.25 安装 Shadow-4.8.1
+
+Shadow 软件包含以安全方式处理密码的程序。
+
+#### 8.25.1 准备安装 Shadow
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf shadow-4.8.1.tar.xz 
+(lfs chroot) root:/sources# cd shadow-4.8.1
+```
+
+注意：如果您想强制使用强密码，请参阅 http://www.linuxfromscratch.org/blfs/view/10.0/postlfs/cracklib.html 以在构建 Shadow 之前安装 CrackLib。然后将 --with-libcrack 添加到下面的配置命令中。
+
+禁用组程序及其手册页的安装，因为 Coreutils 提供了更好的版本。此外，禁止安装已在第 8.3 节“Man-pages-5.08”中安装的手册页：
+
+```sh
+(lfs chroot) root:/sources/shadow-4.8.1# find man -name Makefile.in -exec sed -i 's/groups\.1 / /'   {} \;
+(lfs chroot) root:/sources/shadow-4.8.1# find man -name Makefile.in -exec sed -i 's/getspnam\.3 / /' {} \;
+(lfs chroot) root:/sources/shadow-4.8.1# find man -name Makefile.in -exec sed -i 's/passwd\.5 / /'   {} \;
+```
+
+不要使用默认的 crypt 方法，而是使用更安全的 SHA-512 密码加密方法，它也允许密码超过 8 个字符。还需要将 Shadow 默认使用的用户邮箱的过时 /var/spool/mail 位置更改为当前使用的 /var/mail 位置：
+
+```sh
+# 执行以下命令
+sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD SHA512:' \
+    -e 's:/var/spool/mail:/var/mail:'                 \
+    -i etc/login.defs
+```
+
+如果您选择使用 Cracklib 支持构建 Shadow，请运行以下命令：
+
+```sh
+sed -i 's:DICTPATH.*:DICTPATH\t/lib/cracklib/pw_dict:' etc/login.defs (我不运行此代码)
+```
+
+稍作修改，使 useradd 生成的第一个组号为 1000：
+
+```sh
+(lfs chroot) root:/sources/shadow-4.8.1# sed -i 's/1000/999/' etc/useradd
+```
+
+配置并编译安装：
+
+```sh
+# 创建文件
+(lfs chroot) root:/sources/shadow-4.8.1# touch /usr/bin/passwd
+
+# 开始编译
+time { ./configure --sysconfdir=/etc \
+            --with-group-name-max-length=32 && make && make install; }
+
+# 安装完成后输出信息：
+make[3]: Leaving directory '/sources/shadow-4.8.1/etc'
+make[2]: Leaving directory '/sources/shadow-4.8.1/etc'
+make[1]: Leaving directory '/sources/shadow-4.8.1/etc'
+make[1]: Entering directory '/sources/shadow-4.8.1'
+make[2]: Entering directory '/sources/shadow-4.8.1'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/shadow-4.8.1'
+make[1]: Leaving directory '/sources/shadow-4.8.1'
+
+real    0m49.443s
+user    0m35.163s
+sys     0m11.691s
+```
+
+#### 8.25.2 配置 Shadow
+
+该软件包包含用于添加、修改和删除用户和组的实用程序；设置和更改他们的密码；并执行其他管理任务。有关密码隐藏含义的完整说明，请参阅解压后的源代码树中的 `doc/HOWTO` 文件。如果使用 Shadow 支持，请记住需要验证密码的程序（显示管理器、FTP 程序、pop3 守护程序等）必须与 Shadow 兼容。也就是说，他们需要能够使用隐藏密码。
+
+要启用影子密码，请运行以下命令：
+
+```sh
+(lfs chroot) root:/sources/shadow-4.8.1# pwconv
+```
+
+要启用影子组密码，请运行：
+
+```sh
+(lfs chroot) root:/sources/shadow-4.8.1# grpconv
+```
+
+Shadow 对 useradd 实用程序的库存配置有一些需要解释的注意事项。首先，useradd 实用程序的默认操作是创建用户和与用户同名的组。默认情况下，用户 ID (UID) 和组 ID (GID) 编号将以 1000 开头。这意味着如果您不向 useradd 传递参数，则每个用户都将成为系统上唯一组的成员。如果此行为不受欢迎，则需要将 -g 参数传递给 useradd。默认参数存储在 /etc/default/useradd 文件中。您可能需要修改此文件中的两个参数以满足您的特定需求。
+
+#### 8.25.3 设置 root 密码
+
+为用户 root 选择一个密码并通过运行来设置它：
+
+```sh
+(lfs chroot) root:/sources/shadow-4.8.1# passwd root
+Changing password for root
+Enter the new password (minimum of 5 characters)
+Please use a combination of upper and lower case letters and numbers.
+New password: # 这里我输入了密码 12345
+Bad password: too simple.    # 由于12345是弱密码，我被要求再次输入一遍
+Warning: weak password (enter it again to use it anyway).
+New password: 
+Re-enter new password: 
+passwd: password changed.
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/shadow-4.8.1# cd ..
+(lfs chroot) root:/sources# rm -rf shadow-4.8.1
+```
+
+### 8.26 安装 GCC-10.2.0
+
+GCC 包含 GNU 编译器集合，其中包括 C 和 C++ 编译器。
+
+注意：此包较大，配置时间较长
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf gcc-10.2.0.tar.xz 
+(lfs chroot) root:/sources# cd gcc-10.2.0
+```
+
+如果在 x86_64 上构建，请将 64 位库的默认目录名称更改为“lib”：
+
+```sh
+# 运行此代码
+case $(uname -m) in
+  x86_64)
+    sed -e '/m64=/s/lib64/lib/' \
+        -i.orig gcc/config/i386/t-linux64
+  ;;
+esac
+```
+
+GCC 文档建议在专用构建目录中构建 GCC：
+
+```sh
+(lfs chroot) root:/sources/gcc-10.2.0# mkdir -v build
+mkdir: created directory 'build'
+(lfs chroot) root:/sources/gcc-10.2.0# cd build/
+```
+
+配置并编译
+
+```sh
+time { ../configure --prefix=/usr     \
+             LD=ld                    \
+             --enable-languages=c,c++ \
+             --disable-multilib       \
+             --disable-bootstrap      \
+             --with-system-zlib && make; }
+
+# 编译完成后输出以下信息：
+make[4]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[3]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[2]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[1]: Leaving directory '/sources/gcc-10.2.0/build'
+
+real    52m41.791s
+user    47m36.039s
+sys     3m58.435s
+```
+
+重要：在本节中，GCC 的测试套件被认为是至关重要的。在任何情况下都不要跳过它。
+
+已知 GCC 测试套件中的一组测试会耗尽默认堆栈，因此在运行测试之前增加堆栈大小：
+
+```sh
+(lfs chroot) root:/sources/gcc-10.2.0/build# ulimit -s 32768
+```
+
+设置以非特权用户身份测试结果，但不要因错误而停止：
+
+```sh
+(lfs chroot) root:/sources/gcc-10.2.0/build# chown -Rv tester . 
+(lfs chroot) root:/sources/gcc-10.2.0/build# su tester -c "PATH=$PATH make -k check"
+```
+
+要接收测试套件结果的摘要，请运行：
+
+```sh
+../contrib/test_summary
+```
+
+如果只想看摘要，将输出用管道送至 `grep -A7 Summ`，即 `../contrib/test_summary | grep -A7 Summ`
+
+结果可以与位于 http://www.linuxfromscratch.org/lfs/build-logs/10.0/ 和 https://gcc.gnu.org/ml/gcc-testresults/ 的结果进行比较。
+
+已知与 get_time 相关的六个测试失败。这些显然与 en_HK 语言环境有关。
+
+此外，已知与以下文件相关的以下测试因 glibc-2.32 失败：asan_test.C、co-ret-17-void-ret-coro.C、pr95519-05-gro.C、pr80166.c。
+
+一些意外的失败总是无法避免的。 GCC 开发人员通常知道这些问题，但尚未解决。除非测试结果与上述 URL 中的结果有很大不同，否则可以安全地继续。
+
+安装软件包并删除不需要的目录：
+
+```sh
+time { make install && rm -rf /usr/lib/gcc/$(gcc -dumpmachine)/10.2.0/include-fixed/bits/; }
+
+# 安装完成后输出以下信息：
+
+```
+
+GCC 构建目录现在归 tester 所有，安装的头文件目录（及其内容）的所有权将不正确。将所有权更改为 root 用户和组：
+
+```sh
+chown -v -R root:root /usr/lib/gcc/*linux-gnu/10.2.0/include{,-fixed}
+```
+
+出于“历史”原因，创建 FHS 所需的符号链接。
+
+```sh
+ln -sv ../usr/bin/cpp /lib
+```
+
+添加兼容性符号链接以启用具有链接时间优化 (LTO) 的构建程序：
+
+```sh
+install -v -dm755 /usr/lib/bfd-plugins
+ln -sfv ../../libexec/gcc/$(gcc -dumpmachine)/10.2.0/liblto_plugin.so /usr/lib/bfd-plugins/
+```
+
+现在我们的最终工具链已经到位，再次确保编译和链接按预期工作很重要。我们通过执行一些健全性检查来做到这一点：
+
+```sh
+echo 'int main(){}' > dummy.c
+cc dummy.c -v -Wl,--verbose &> dummy.log
+readelf -l a.out | grep ': /lib'
+```
+
+应该没有错误，上一个命令的输出将是（允许动态链接器名称中特定于平台的差异）：
+
+```sh
+[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
+```
+
+现在确保我们设置为使用正确的启动文件：
+
+```sh
+grep -o '/usr/lib.*/crt[1in].*succeeded' dummy.log
+```
+
+上一条命令的输出应该是：
+
+```sh
+/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../lib/crt1.o succeeded
+/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../lib/crti.o succeeded
+/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../lib/crtn.o succeeded
+```
+
+根据您的机器架构，上述内容可能略有不同。不同之处在于 /usr/lib/gcc 之后的目录名称。这里要注意的重要一点是 gcc 已经在 /usr/lib 目录下找到了所有三个 crt*.o 文件。
+
+验证编译器是否正在搜索正确的头文件：
+
+```sh
+grep -B4 '^ /usr/include' dummy.log
+```
+
+此命令应返回以下输出：
+
+```sh
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/include
+ /usr/local/include
+ /usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/include-fixed
+ /usr/include
+```
+
+同样，以您的目标三元组命名的目录可能与上述不同，具体取决于您的系统架构。
+
+接下来，验证新链接器是否与正确的搜索路径一起使用：
+
+```sh
+grep 'SEARCH.*/usr/lib' dummy.log |sed 's|; |\n|g'
+```
+
+对包含带有 `-linux-gnu` 组件的路径的引用应该被忽略，上一个命令的输出应该是：
+
+```sh
+SEARCH_DIR("/usr/x86_64-pc-linux-gnu/lib64")
+SEARCH_DIR("/usr/local/lib64")
+SEARCH_DIR("/lib64")
+SEARCH_DIR("/usr/lib64")
+SEARCH_DIR("/usr/x86_64-pc-linux-gnu/lib")
+SEARCH_DIR("/usr/local/lib")
+SEARCH_DIR("/lib")
+SEARCH_DIR("/usr/lib");
+```
+
+32 位系统可能会看到几个不同的目录。例如，这是 i686 机器的输出：
+
+```sh
+SEARCH_DIR("/usr/i686-pc-linux-gnu/lib32")
+SEARCH_DIR("/usr/local/lib32")
+SEARCH_DIR("/lib32")
+SEARCH_DIR("/usr/lib32")
+SEARCH_DIR("/usr/i686-pc-linux-gnu/lib")
+SEARCH_DIR("/usr/local/lib")
+SEARCH_DIR("/lib")
+SEARCH_DIR("/usr/lib");
+```
+
+接下来确保我们使用了正确的 libc：
+
+```sh
+grep "/lib.*/libc.so.6 " dummy.log
+```
+
+上一条命令的输出应该是：
+
+```sh
+attempt to open /lib/libc.so.6 succeeded
+```
+
+确保 GCC 使用正确的动态链接器：
+
+```sh
+grep found dummy.log
+```
+
+上一个命令的输出应该是（允许动态链接器名称中特定于平台的差异）：
+
+```sh
+found ld-linux-x86-64.so.2 at /lib/ld-linux-x86-64.so.2
+```
+
+**如果输出未如上所示出现或根本没有收到，则说明出现了严重错误**。调查并追溯这些步骤以找出问题所在并进行纠正。在继续该过程之前，需要解决任何问题。
+
+一切正常后，清理测试文件：
+
+```sh
+rm -v dummy.c a.out dummy.log
+```
+
+最后，移动一个错位的文件：
+
+```sh
+mkdir -pv /usr/share/gdb/auto-load/usr/lib
+mv -v /usr/lib/*gdb.py /usr/share/gdb/auto-load/usr/lib
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.27 安装 Pkg-config-0.29.2
+
+pkg-config 包含一个工具，用于在包安装的配置和制作阶段将包含路径和/或库路径传递给构建工具。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查
+
+```sh
+time { ./configure --prefix=/usr       \
+            --with-internal-glib       \
+            --disable-host-tool        \
+            --docdir=/usr/share/doc/pkg-config-0.29.2 && make && make check; }
+
+# 检查完毕后输出以下信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完毕后输出以下信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.28 安装 Ncurses-6.2
+
+Ncurses 包含用于独立于终端处理字符屏幕的库。
+
+解压软件包
+
+```sh
+
+```
+
+禁止安装不由 configure 处理的静态库：
+
+```sh
+sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
+```
+
+配置并编译安装
+
+```sh
+time { ./configure --prefix=/usr    \
+            --mandir=/usr/share/man \
+            --with-shared           \
+            --without-debug         \
+            --without-normal        \
+            --enable-pc-files       \
+            --enable-widec && make && make install; }
+
+# 安装完成后输出信息：
+
+```
+
+将共享库移动到 /lib 目录，它们应该驻留在那里：
+
+```sh
+mv -v /usr/lib/libncursesw.so.6* /lib
+```
+
+由于库已被移动，一个符号链接指向一个不存在的文件。重新创建它：
+
+```sh
+ln -sfv ../../lib/$(readlink /usr/lib/libncursesw.so) /usr/lib/libncursesw.so
+```
+
+许多应用程序仍然希望链接器能够找到非宽字符 Ncurses 库。通过符号链接和链接器脚本，诱使此类应用程序与宽字符库链接：
+
+```sh
+for lib in ncurses form panel menu ; do
+    rm -vf                    /usr/lib/lib${lib}.so
+    echo "INPUT(-l${lib}w)" > /usr/lib/lib${lib}.so
+    ln -sfv ${lib}w.pc        /usr/lib/pkgconfig/${lib}.pc
+done
+```
+
+最后，确保在构建时寻找 `-lcurses` 的旧应用程序仍然可以构建：
+
+```sh
+rm -vf                     /usr/lib/libcursesw.so
+echo "INPUT(-lncursesw)" > /usr/lib/libcursesw.so
+ln -sfv libncurses.so      /usr/lib/libcurses.so
+```
+
+如果需要，请安装 Ncurses 文档：
+
+```sh
+mkdir -v       /usr/share/doc/ncurses-6.2
+cp -v -R doc/* /usr/share/doc/ncurses-6.2
+```
+
+注意：以上代码说明不会创建非宽字符 Ncurses 库，因为从源代码编译安装的任何包都不会在运行时链接到它们。但是，唯一已知的与非宽字符 Ncurses 库链接的纯二进制应用程序需要版本 5。如果由于某些纯二进制应用程序或要与 LSB 兼容而必须拥有此类库，请使用以下命令再次构建包：
+
+```sh
+# 我不运行以下命令
+make distclean
+./configure --prefix=/usr    \
+            --with-shared    \
+            --without-normal \
+            --without-debug  \
+            --without-cxx-binding \
+            --with-abi-version=5 
+make sources libs
+cp -av lib/lib*.so.5* /usr/lib
+```
+
+### 8.29 安装 Sed-4.8
+
+Sed 包含一个流编辑器。
+
+解压软件包
+
+```sh
+
+```
+
+配置并编译代码和 HTML 文档
+
+```sh
+time { ./configure --prefix=/usr --bindir=/bin && make && make html; }
+
+# 编译完成后输出以下内容：
+
+```
+
+若要进行测试，请执行：
+
+```sh
+chown -Rv tester .
+su tester -c "PATH=$PATH make check"
+```
+
+安装软件包及其文档：
+
+```sh
+make install
+install -d -m755           /usr/share/doc/sed-4.8
+install -m644 doc/sed.html /usr/share/doc/sed-4.8
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.30 安装 Psmisc-23.3
+
+Psmisc 包含用于显示有关正在运行进程的信息的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置并编译安装
+
+```sh
+time { ./configure --prefix=/usr && make && make install; }
+
+# 安装完成后输出信息：
+
+```
+
+最后，将 killall 和 fuser 程序移动到 FHS 指定的位置：
+
+```sh
+mv -v /usr/bin/fuser   /bin
+mv -v /usr/bin/killall /bin
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.31 安装 Gettext-0.21
+
+Gettext 包含用于国际化和本地化的实用程序。这些允许使用 NLS（本机语言支持）编译程序，使它们能够以用户的母语输出消息。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查
+
+```sh
+time { ./configure --prefix=/usr  \
+            --disable-static      \
+            --docdir=/usr/share/doc/gettext-0.21 && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+执行最后操作
+
+```sh
+chmod -v 0755 /usr/lib/preloadable_libintl.so
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.32 安装 Bison-3.7.1
+
+Bison 包含一个解析器生成器。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查
+
+```sh
+time { ./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.7.1 && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.33 安装 Grep-3.4
+
+Grep 包含用于搜索文件内容的程序。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查
+
+```sh
+time { ./configure --prefix=/usr --bindir=/bin && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
+
+### 8.34 安装 Bash-5.0
+
+解压软件包
+
+```sh
+
+```
+
+合并一些上游开发者的修复：
+
+```sh
+patch -Np1 -i ../bash-5.0-upstream_fixes-1.patch
+```
+
+准备配置并编译
+
+```sh
+time { ./configure --prefix=/usr             \
+            --docdir=/usr/share/doc/bash-5.0 \
+            --without-bash-malloc            \
+            --with-installed-readline && make; }
+
+# 编译完成后输出的信息：
+
+```
+
+要准备测试，请确保 tester 用户可以写入源代码树：
+
+```sh
+chown -Rv tester .
+```
+
+现在，以 tester 用户身份运行测试：
+
+```sh
+su tester << EOF
+PATH=$PATH make tests < $(tty)
+EOF
+```
+
+安装软件包并将主可执行文件移动到 /bin：
+
+```sh
+make install
+mv -vf /usr/bin/bash /bin
+```
+
+运行新编译的 bash 程序（替换当前正在执行的程序）：
+
+```sh
+exec /bin/bash --login +h
+```
+
+上述命令使用的参数使 bash 进程成为交互式登录 shell，并继续禁用散列，以便在新程序可用时找到它们。
+
+### 8.35 安装 Libtool-2.4.6
+
+Libtool 包包含 GNU 通用库支持脚本。它将使用共享库的复杂性包装在一个一致的、可移植的界面中。
+
+解压软件包
+
+```sh
+
+```
+
+配置编译并检查，注意在具有多核的系统上，可以显著减少 libtool 的测试时间。为此，请将 TESTSUITEFLAGS=-j<N> 附加到上面的行。例如，使用 -j4 可以将测试时间减少 60% 以上。
+
+```sh
+time { ./configure --prefix=/usr && make && make check; }
+
+# 检查完成后输出信息：
+
+```
+
+安装软件包
+
+```sh
+time { make install; }
+
+# 安装完成后输出信息：
+```
+
+清除软件包
+
+```sh
+
+```
 
 
 
