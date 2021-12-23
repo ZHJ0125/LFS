@@ -10426,7 +10426,12 @@ cat > /etc/fstab << "EOF"
 # file system  mount-point  type     options             dump  fsck
 #                                                              order
 
-/dev/sdb1     /             ext4     defaults            1     1
+/dev/sdb1      /            ext4     defaults            1     1
+proc           /proc        proc     nosuid,noexec,nodev 0     0
+sysfs          /sys         sysfs    nosuid,noexec,nodev 0     0
+devpts         /dev/pts     devpts   gid=5,mode=620      0     0
+tmpfs          /run         tmpfs    defaults            0     0
+devtmpfs       /dev         devtmpfs mode=0755,nosuid    0     0
 
 # End /etc/fstab
 EOF
@@ -10560,10 +10565,11 @@ make menuconfig
 
 # 请务必保证以下配置项按样例配置：
 General setup -->
-   [ ] Auditing Support [CONFIG_AUDIT]
+   [ ] Auditing Support [CONFIG_AUDIT] # 此项需要修改
    [*] Control Group support [CONFIG_CGROUPS]
    [ ] Enable deprecated sysfs features to support old userspace tools [CONFIG_SYSFS_DEPRECATED]
-   [*] Configure standard kernel features (expert users) [CONFIG_EXPERT] --->         
+   [*] Configure standard kernel features (expert users) [CONFIG_EXPERT] 
+      --->   # 上面这一项需要修改
       [*] open by fhandle syscalls [CONFIG_FHANDLE]
 Processor type and features  --->
    [*] Enable seccomp to safely compute untrusted bytecode [CONFIG_SECCOMP]
@@ -10591,12 +10597,12 @@ File systems  --->
 编译内核镜像和模块：
 
 ```sh
-(lfs chroot) root:/sources/linux-5.8.3# make
+(lfs chroot) root:/sources/linux-5.8.3# time { make; }
 
 # 编译完成后输出信息：
 Setup is 13884 bytes (padded to 14336 bytes).
-System is 8682 kB
-CRC 6253b6c3
+System is 7542 kB
+CRC 5a787df3
 Kernel: arch/x86/boot/bzImage is ready  (#1)
   MODPOST Module.symvers
   CC [M]  drivers/thermal/intel/x86_pkg_temp_thermal.mod.o
@@ -10623,6 +10629,10 @@ Kernel: arch/x86/boot/bzImage is ready  (#1)
   LD [M]  net/netfilter/xt_mark.ko
   CC [M]  net/netfilter/xt_nat.mod.o
   LD [M]  net/netfilter/xt_nat.ko
+
+real    34m2.328s
+user    30m12.445s
+sys     3m10.346s
 ```
 
 如果使用内核模块，`/etc/modprobe.d` 可能需要模块配置。除非在内核配置中禁用了模块支持，否则安装模块：
@@ -10695,9 +10705,11 @@ EOF
 
 ### 10.4 使用 GRUB 设置引导过程
 
+我在此处创建了快照！
+
 #### 10.4.3 设置配置
 
-将 GRUB 文件安装到/boot/grub并设置引导轨道：
+将 GRUB 文件安装到 `/boot/grub` 并设置引导轨道：
 
 ```sh
 (lfs chroot) root:/sources/linux-5.8.3# grub-install /dev/sdb
@@ -10720,7 +10732,7 @@ set timeout=5
 insmod ext2
 set root=(hd1,1)
 
-menuentry "GNU/Linux, Linux 5.8.3-lfs-10.0" {
+menuentry "GNU/Linux, Linux 5.8.3-lfs-10.0 (build by ZHJ0125)" {
         linux   /boot/vmlinuz-5.8.3-lfs-10.0 root=/dev/sdb1 ro
 }
 EOF
