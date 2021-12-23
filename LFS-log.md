@@ -10233,67 +10233,599 @@ EOF
 
 ### 9.7 Bash Shell 启动文件
 
+shell 程序 `/bin/bash`（以下简称 `shell`）使用一组启动文件来帮助创建一个运行环境。每个文件都有特定的用途，可能会以不同的方式影响登录和交互环境。/etc 目录中的文件提供全局设置。如果主目录中存在等效文件，则它可能会覆盖全局设置。
 
+通过读取文件 ，使用 `/bin/login` 成功登录后启动交互式登录 `shell` `/etc/passwd`。交互式非登录 shell 在命令行（例如`[prompt]$/bin/bash`）处启动。当 shell 脚本运行时，通常会出现一个非交互式 shell。它是非交互式的，因为它正在处理脚本而不是在命令之间等待用户输入。
 
+有关更多信息，请参阅 Bash 启动文件和交互式 Shell 部分下的 info bash。
 
+**当 shell 作为交互式登录时 `/etc/profile`，`~/.bash_profile` 将读取这些文件。**
 
+`/etc/profile` 文件中设置了一些本地语言支持所需的环境变量。正确设置它们会导致：
 
+* 翻译成母语的程序输出
 
+* 将字符正确分类为字母、数字和其他类别。这是bash在非英语语言环境中正确接受命令行中的非 ASCII 字符 所必需的
+* 国家的正确字母排序顺序
+* 合适的默认纸张尺寸
+* 货币、时间和日期值的正确格式
 
+将 `<ll>` 下面替换为所需语言的两字母代码（例如 `en`）和 `<CC>` 相应国家/地区的两字母代码（例如 `GB`）。 `<charmap>` 应替换为您选择的语言环境的规范 charmap。 也可能存在诸如 `@euro` 之类的可选修饰符。
 
+可以通过运行以下命令获得 Glibc 支持的所有语言环境的列表：
 
+```sh
+(lfs chroot) root:/# locale -a
+```
 
+Charmap 可以有多个别名，例如， `ISO-8859-1` 也称为 `iso8859-1` 和 `iso88591` 。某些应用程序无法正确处理各种同义词（例如，要求将 `UTF-8` 写为 `UTF-8`，而不是 `utf8`），因此在大多数情况下为特定语言环境选择规范名称是最安全的。要确定规范名称，请运行以下命令，其中 `<locale name>` 是 `locale -a` 为您的首选语言环境（在我们的示例中为 `en_GB.ISO88591`）给出的输出。
 
+```sh
+# 不要执行这条语句：
+LC_ALL=<locale name> locale charmap
+# 执行这条语句，将语言设置为中文：
+(lfs chroot) root:/# LC_ALL=zh_CN.utf8 locale charmap
+UTF-8
+```
 
+在将使用上述启发式找到的区域设置添加到 Bash 启动文件之前，必须对其进行测试，这一点很重要：
 
+```sh
+(lfs chroot) root:/# LC_ALL=zh_CN.utf8 locale language
+Chinese
+(lfs chroot) root:/# LC_ALL=zh_CN.utf8 locale charmap
+UTF-8
+(lfs chroot) root:/# LC_ALL=zh_CN.utf8 locale int_curr_symbol
+CNY 
+(lfs chroot) root:/# LC_ALL=zh_CN.utf8 locale int_prefix
+86
+```
 
+上述命令应打印语言名称、语言环境使用的字符编码、当地货币以及在电话号码前拨打的前缀，以便进入该国家/地区。如果上面的任何命令失败并显示类似于下面显示的消息，这意味着您的语言环境未在第 8.8 节“Glibc-2.32”中安装，或者 Glibc 的默认安装不支持。
 
+```sh
+locale: Cannot set LC_* to default locale: No such file or directory
+```
 
+如果发生这种情况，您应该使用 `localedef` 命令安装所需的语言环境，或者考虑选择不同的语言环境。进一步的说明假定 Glibc 没有此类错误消息。
 
+如果语言环境名称不符合他们的期望，其他包也可能无法正常运行（但不一定会显示任何错误消息）。在这些情况下，调查其他 Linux 发行版如何支持您的语言环境可能会提供一些有用的信息。
 
+确定正确的区域设置后，创建 `/etc/profile`文件：
 
+```sh
+# 执行以下操作：
+cat > /etc/profile << "EOF"
+# Begin /etc/profile
 
+export LANG=<ll>_<CC>.<charmap><@modifiers>
 
+# End /etc/profile
+EOF
+```
 
+`C`（默认）和 `en_US.utf8` （推荐美国英语用户使用）的语言环境是不同的。 `C` 使用 `US-ASCII` 7位字符集，并将设置高位的字节视为无效字符。这就是为什么 ls 命令会在该语言环境中用问号替换它们。此外，尝试从 Mutt 或 Pine 发送带有此类字符的邮件会导致发送不符合 RFC 的消息（外发邮件中的字符集表示为 `unknown 8-bit`）。因此， 只有当您确定永远不需要 8 位字符时，才可以使用 `C` 语言环境。
 
+### 9.8 创建 /etc/inputrc 文件
 
+inputrc 文件是 readline 库的配置文件，它在用户从终端输入一行时提供编辑功能。它的工作原理是将键盘输入转换为特定的操作。Readline 被 bash 和大多数其他 shell 以及许多其他应用程序使用。
 
+大多数人不需要特定于用户的功能，因此下面的命令会创建一个 `/etc/inputrc` 供所有登录者使用的全局变量。如果您稍后决定需要基于每个用户覆盖默认值，您可以在用户的主目录中创建一个 `.inputrc` 文件修改后的映射。
 
+有关如何编辑 inputrc 文件的更多信息，可以查看 info bash 中 Readline Init File 章节。info readline 也是一个很好的信息来源。
 
+下面是一个通用的全局 inputrc 变量以及解释各种选项的作用的注释。请注意，注释不能与命令在同一行。使用以下命令创建文件：
 
+```sh
+# 执行以下命令：
+cat > /etc/inputrc << "EOF"
+# Begin /etc/inputrc
+# Modified by Chris Lynn <roryo@roryo.dynup.net>
 
+# Allow the command prompt to wrap to the next line
+set horizontal-scroll-mode Off
 
+# Enable 8bit input
+set meta-flag On
+set input-meta On
 
+# Turns off 8th bit stripping
+set convert-meta Off
 
+# Keep the 8th bit for display
+set output-meta On
 
+# none, visible or audible
+set bell-style none
 
+# All of the following map the escape sequence of the value
+# contained in the 1st argument to the readline specific functions
+"\eOd": backward-word
+"\eOc": forward-word
 
+# for linux console
+"\e[1~": beginning-of-line
+"\e[4~": end-of-line
+"\e[5~": beginning-of-history
+"\e[6~": end-of-history
+"\e[3~": delete-char
+"\e[2~": quoted-insert
 
+# for xterm
+"\eOH": beginning-of-line
+"\eOF": end-of-line
 
+# for Konsole
+"\e[H": beginning-of-line
+"\e[F": end-of-line
 
+# End /etc/inputrc
+EOF
+```
 
+### 9.9 创建 /etc/shells 文件
 
+shells 文件包含系统上的登录 shell 列表。应用程序使用此文件来确定 shell 是否有效。对于每个 shell，应该有一行，由 shell 相对于目录结构根目录 (/) 的路径组成。
 
+例如， chsh 会查阅此文件以确定非特权用户是否可以更改其自己帐户的登录 shell。如果未列出命令名称，用户将被拒绝更改 shell 的能力。
 
+这是 GDM 等应用程序的要求，如果找不到 `/etc/shells`，则不会填充面部浏览器，或者传统上不允许使用未包含在此文件中的 shell 的用户访问的 FTP 守护程序。
 
+```sh
+# 执行以下命令：
+cat > /etc/shells << "EOF"
+# Begin /etc/shells
 
+/bin/sh
+/bin/bash
 
+# End /etc/shells
+EOF
+```
 
+## 第十章 LFS 系统引导
 
+我在此处创建了一个快照！
 
+### 10.1 概述
 
+是时候让 LFS 系统可启动了。本章讨论创建 `/etc/fstab` 文件、为新的 LFS 系统构建内核以及安装 `GRUB` 引导加载程序，以便在启动时选择 LFS 系统进行引导。
 
+### 10.2 创建 /etc/fstab 文件
 
+某些程序使用 `/etc/fstab` 文件来确定默认情况下将文件系统安装到何处、以何种顺序以及在安装前必须检查哪些文件系统（完整性错误）。创建一个新的文件系统表，如下所示：
 
+```sh
+# 不要执行以下命令：
+cat > /etc/fstab << "EOF"
+# Begin /etc/fstab
 
+# file system  mount-point  type     options             dump  fsck
+#                                                              order
 
+/dev/<xxx>     /            <fff>    defaults            1     1
+/dev/<yyy>     swap         swap     pri=1               0     0
+proc           /proc        proc     nosuid,noexec,nodev 0     0
+sysfs          /sys         sysfs    nosuid,noexec,nodev 0     0
+devpts         /dev/pts     devpts   gid=5,mode=620      0     0
+tmpfs          /run         tmpfs    defaults            0     0
+devtmpfs       /dev         devtmpfs mode=0755,nosuid    0     0
 
+# End /etc/fstab
+EOF
+```
 
+替换 `<xxx>`， `<yyy>` 和 `<fff>` 的值以便适合于系统，例如替换为 `sda2`，`sda5`，和 `ext4`。有关此文件中六个字段的详细信息，请参阅 `man 5 fstab`。
 
+根据我的实际情况，我只挂载了 `/` 分区，因此将命令修改为：
 
+```sh
+cat > /etc/fstab << "EOF"
+# Begin /etc/fstab
 
+# file system  mount-point  type     options             dump  fsck
+#                                                              order
 
+/dev/sdb1     /             ext4     defaults            1     1
 
+# End /etc/fstab
+EOF
+```
 
+关于以上分区，可以通过输入以下命令查看：
 
+```sh
+(lfs chroot) root:/# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdb1        20G  1.6G   17G   9% /
+udev            3.9G     0  3.9G   0% /dev
+tmpfs           3.9G     0  3.9G   0% /run
+```
 
+这里的 `udev` 和 `tmpfs` 是在构建 LFS 时生成的分区，除去这两个分区外，就是我们需要配置的分区。
+
+MS-DOS 或 Windows 的文件系统（即 vfat、ntfs、smbfs、cifs、iso9660、udf）需要一个特殊选项 utf8，以便正确解释文件名中的非 ASCII 字符。
+
+对于非 UTF-8 语言环境， iocharset 的值应设置为与语言环境的字符集相同，并以内核能够理解的方式进行调整。如果相关字符集定义（在配置内核时在文件系统 -> 本地语言支持下找到）已编译到内核或构建为模块，则此方法有效。但是，如果语言环境的字符集是 UTF-8，则对应的选项 iocharset=utf8 将使文件系统区分大小写。要解决此utf8问题，需要用特殊选项 utf8 代替 iocharset=utf8。另外，vfat 和 smbfs 文件系统还需要“codepage”选项，它应该被设定为您的语言在 MS-DOS 下的代码页编号。
+
+例如，为了挂载 USB 闪存驱动器，`zh-CN.GBK` 用户需要在 `/etc/fstab` 中添加以下的挂载选项：
+
+```sh
+# 我不运行此命令
+noauto,user,quiet,showexec,iocharset=gbk,codepage=936
+```
+
+对于 `zh_CN.UTF-8` 用户的对应选项是：
+
+```sh
+# 我不运行此命令
+noauto,user,quiet,showexec,codepage=866,utf8
+```
+
+另外，一些硬盘类型在遇到电源故障时，假如在 `/etc/fstab` 中使用 `barrier=1` 这个挂载选项，则会让 ext3 文件系统的数据更加安全。如需检查磁盘是否支持此选项，请运行 hdparm。例如：
+
+```sh
+hdparm -I /dev/sda | grep NCQ
+```
+
+如果有输出内容，则代表选项可用。
+
+我执行以上命令后的结果：
+
+```sh
+(lfs chroot) root:/# hdparm -I /dev/sda | grep NCQ
+bash: hdparm: command not found
+```
+
+因此忽略该项。
+
+### 10.3 Linux-5.8.3
+
+重要：请注意，本章节耗时非常非常非常久！
+
+Linux 软件包包含 Linux 内核。
+
+#### 10.3.1 安装内核
+
+解压软件包：
+
+```sh
+(lfs chroot) root:/# cd /sources/
+(lfs chroot) root:/sources# tar xf linux-5.8.3.tar.xz 
+(lfs chroot) root:/sources# cd linux-5.8.3
+```
+
+构建内核涉及几个步骤 —— **配置**、**编译**和**安装**。阅读README内核源代码树中的文件，了解本书配置内核方式的替代方法。
+
+通过运行以下命令准备编译：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# make mrproper
+```
+
+这确保内核树是绝对干净的。内核团队建议在每次内核编译之前发出此命令。不要依赖解压后的源代码树是干净的。
+
+有多种方法可以配置内核选项。通常，这是通过菜单驱动的界面完成的，例如：
+
+```sh
+# 先不要运行此命令
+make menuconfig
+```
+
+注意：设置内核配置的一个好的起点是运行 `make defconfig`。这会将基本配置设置为考虑您当前系统架构的良好状态。
+
+请务必启用/禁用/设置以下功能，否则系统可能无法正常工作或根本无法启动：
+
+```
+设备驱动程序 --->
+  通用驱动程序选项 ---> 
+   [ ] 支持 uevent 助手 [CONFIG_UEVENT_HELPER] 
+   [*] 维护一个 devtmpfs 文件系统以挂载在 /dev [CONFIG_DEVTMPFS]
+```
+
+如果您的主机硬件使用 UEFI，那么上面的 `make defconfig` 应该会自动添加一些与 EFI 相关的内核选项。
+
+为了允许从主机的 UEFI 引导环境中引导 LFS 内核，您的内核必须选择此选项：
+
+```
+处理器类型和特性 ---> 
+   [*] EFI 存根支持 [CONFIG_EFI_STUB]
+```
+
+```sh
+# 运行以下命令，并按照样例配置：
+(lfs chroot) root:/sources/linux-5.8.3# make defconfig
+  HOSTCC  scripts/basic/fixdep
+  HOSTCC  scripts/kconfig/conf.o
+  HOSTCC  scripts/kconfig/confdata.o
+  HOSTCC  scripts/kconfig/expr.o
+  LEX     scripts/kconfig/lexer.lex.c
+  YACC    scripts/kconfig/parser.tab.[ch]
+  HOSTCC  scripts/kconfig/lexer.lex.o
+  HOSTCC  scripts/kconfig/parser.tab.o
+  HOSTCC  scripts/kconfig/preprocess.o
+  HOSTCC  scripts/kconfig/symbol.o
+  HOSTCC  scripts/kconfig/util.o
+  HOSTLD  scripts/kconfig/conf
+*** Default configuration is based on 'x86_64_defconfig'
+#
+# configuration written to .config
+#
+```
+
+接下来，可以用 `make menuconfig` 进行配置，并保证按下面的样例进行设置：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# make menuconfig
+
+# 请务必保证以下配置项按样例配置：
+General setup -->
+   [ ] Auditing Support [CONFIG_AUDIT]
+   [*] Control Group support [CONFIG_CGROUPS]
+   [ ] Enable deprecated sysfs features to support old userspace tools [CONFIG_SYSFS_DEPRECATED]
+   [*] Configure standard kernel features (expert users) [CONFIG_EXPERT] --->         
+      [*] open by fhandle syscalls [CONFIG_FHANDLE]
+Processor type and features  --->
+   [*] Enable seccomp to safely compute untrusted bytecode [CONFIG_SECCOMP]
+Firmware Drivers  --->
+   [*] Export DMI identification via sysfs to userspace [CONFIG_DMIID]
+Networking support  --->
+  Networking options  --->
+   <*> The IPv6 protocol [CONFIG_IPV6]
+Device Drivers  --->
+  Generic Driver Options  --->
+   [ ] Support for uevent helper [CONFIG_UEVENT_HELPER]
+   [*] Maintain a devtmpfs filesystem to mount at /dev [CONFIG_DEVTMPFS]
+   Firmware Loader --->
+      [ ] Enable the firmware sysfs fallback mechanism [CONFIG_FW_LOADER_USER_HELPER]
+File systems  --->
+   [*] Inotify support for userspace [CONFIG_INOTIFY_USER]
+  Pseudo filesystems  --->
+   [*] Tmpfs POSIX Access Control Lists [CONFIG_TMPFS_POSIX_ACL]
+
+# 配置完成后保存退出，会输出以下信息：
+*** End of the configuration.
+*** Execute 'make' to start the build or try 'make help'.
+```
+
+编译内核镜像和模块：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# make
+
+# 编译完成后输出信息：
+Setup is 13884 bytes (padded to 14336 bytes).
+System is 8682 kB
+CRC 6253b6c3
+Kernel: arch/x86/boot/bzImage is ready  (#1)
+  MODPOST Module.symvers
+  CC [M]  drivers/thermal/intel/x86_pkg_temp_thermal.mod.o
+  LD [M]  drivers/thermal/intel/x86_pkg_temp_thermal.ko
+  CC [M]  fs/efivarfs/efivarfs.mod.o
+  LD [M]  fs/efivarfs/efivarfs.ko
+  CC [M]  net/ipv4/netfilter/iptable_nat.mod.o
+  LD [M]  net/ipv4/netfilter/iptable_nat.ko
+  CC [M]  net/ipv4/netfilter/nf_log_arp.mod.o
+  LD [M]  net/ipv4/netfilter/nf_log_arp.ko
+  CC [M]  net/ipv4/netfilter/nf_log_ipv4.mod.o
+  LD [M]  net/ipv4/netfilter/nf_log_ipv4.ko
+  CC [M]  net/ipv6/netfilter/nf_log_ipv6.mod.o
+  LD [M]  net/ipv6/netfilter/nf_log_ipv6.ko
+  CC [M]  net/netfilter/nf_log_common.mod.o
+  LD [M]  net/netfilter/nf_log_common.ko
+  CC [M]  net/netfilter/xt_LOG.mod.o
+  LD [M]  net/netfilter/xt_LOG.ko
+  CC [M]  net/netfilter/xt_MASQUERADE.mod.o
+  LD [M]  net/netfilter/xt_MASQUERADE.ko
+  CC [M]  net/netfilter/xt_addrtype.mod.o
+  LD [M]  net/netfilter/xt_addrtype.ko
+  CC [M]  net/netfilter/xt_mark.mod.o
+  LD [M]  net/netfilter/xt_mark.ko
+  CC [M]  net/netfilter/xt_nat.mod.o
+  LD [M]  net/netfilter/xt_nat.ko
+```
+
+如果使用内核模块，`/etc/modprobe.d` 可能需要模块配置。除非在内核配置中禁用了模块支持，否则安装模块：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# make modules_install
+  INSTALL drivers/thermal/intel/x86_pkg_temp_thermal.ko
+  INSTALL fs/efivarfs/efivarfs.ko
+  INSTALL net/ipv4/netfilter/iptable_nat.ko
+  INSTALL net/ipv4/netfilter/nf_log_arp.ko
+  INSTALL net/ipv4/netfilter/nf_log_ipv4.ko
+  INSTALL net/ipv6/netfilter/nf_log_ipv6.ko
+  INSTALL net/netfilter/nf_log_common.ko
+  INSTALL net/netfilter/xt_LOG.ko
+  INSTALL net/netfilter/xt_MASQUERADE.ko
+  INSTALL net/netfilter/xt_addrtype.ko
+  INSTALL net/netfilter/xt_mark.ko
+  INSTALL net/netfilter/xt_nat.ko
+  DEPMOD  5.8.3
+```
+
+内核映像的路径可能因所使用的平台而异。下面的文件名可以根据您的喜好进行更改，但文件名的主干应该是 vmlinuz 以与下一节中描述的引导过程的自动设置兼容。以下命令假定为 x86 架构：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# cp -iv arch/x86/boot/bzImage /boot/vmlinuz-5.8.3-lfs-10.0
+'arch/x86/boot/bzImage' -> '/boot/vmlinuz-5.8.3-lfs-10.0'
+```
+
+System.map是内核的符号文件。它映射内核 API 中每个函数的函数入口点，以及正在运行的内核的内核数据结构的地址。它在调查内核问题时用作资源。执行以下命令以安装映射文件：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# cp -iv System.map /boot/System.map-5.8.3
+'System.map' -> '/boot/System.map-5.8.3'
+```
+
+内核配置文件 `.config` 由上述的 `make menuconfig` 步骤生成，包含编译好的内核的所有配置选项。最好能将它保留下来以供日后参考：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# cp -iv .config /boot/config-5.8.3
+'.config' -> '/boot/config-5.8.3'
+```
+
+安装 Linux 内核的文档：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# install -d /usr/share/doc/linux-5.8.3
+(lfs chroot) root:/sources/linux-5.8.3# cp -r Documentation/* /usr/share/doc/linux-5.8.3 
+```
+
+#### 10.3.2 配置 Linux 内核模块加载顺序
+
+多数情况下 Linux 内核模块可以自动加载，但有时需要指定加载顺序。负责加载内核模块的程序 `modprobe` 和 `insmod` 从 `/etc/modprobe.d` 下的配置文件中读取加载顺序，例如，如果 USB 驱动程序 (ehci_hcd、ohci_hcd 和 uhci_hcd) 被构建为模块，则必须按照先加载 `echi_hcd`，再加载 `ohci_hcd` 和 `uhci_hcd` 的正确顺序，才能避免引导时出现警告信息。
+
+为此，执行以下命令创建文件 `/etc/modprobe.d/usb.conf`：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# install -v -m755 -d /etc/modprobe.d
+install: creating directory '/etc/modprobe.d'
+
+# 继续执行以下命令
+cat > /etc/modprobe.d/usb.conf << "EOF"
+# Begin /etc/modprobe.d/usb.conf
+
+install ohci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i ohci_hcd ; true
+install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true
+
+# End /etc/modprobe.d/usb.conf
+EOF
+```
+
+### 10.4 使用 GRUB 设置引导过程
+
+#### 10.4.3 设置配置
+
+将 GRUB 文件安装到/boot/grub并设置引导轨道：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# grub-install /dev/sdb
+Installing for i386-pc platform.
+Installation finished. No error reported.
+```
+
+#### 10.4.4 创建 GRUB 配置文件
+
+生成 `/boot/grub/grub.cfg`：
+
+```sh
+# 注意，注意修改以下命令中的 (hd1,1) 和 /dev/sdb1
+# 执行以下命令：
+cat > /boot/grub/grub.cfg << "EOF"
+# Begin /boot/grub/grub.cfg
+set default=0
+set timeout=5
+
+insmod ext2
+set root=(hd1,1)
+
+menuentry "GNU/Linux, Linux 5.8.3-lfs-10.0" {
+        linux   /boot/vmlinuz-5.8.3-lfs-10.0 root=/dev/sdb1 ro
+}
+EOF
+```
+
+## 第 11 章结束
+
+### 11.1 尾声
+
+创建/etc/lfs-release文件可能是个好主意。有了这个文件，您（如果您在某个时候需要寻求帮助，我们也很容易）找出系统上安装了哪个 LFS 版本。通过运行创建此文件：
+
+```sh
+echo 10.0 > /etc/lfs-release
+```
+
+两个描述已安装系统的文件可能会被稍后安装在系统上的软件包使用，无论是二进制形式还是通过构建它们。
+
+第一个显示新系统相对于 Linux 标准库 (LSB) 的状态。要创建此文件，请运行：
+
+```sh
+# 执行该脚本
+cat > /etc/lsb-release << "EOF"
+DISTRIB_ID="Linux From Scratch"
+DISTRIB_RELEASE="10.0"
+DISTRIB_CODENAME="ZHJ0125"
+DISTRIB_DESCRIPTION="Linux From Scratch"
+EOF
+```
+
+第二个包含大致相同的信息，被 systemd 和一些图形桌面环境使用。要创建此文件，请运行：
+
+```sh
+# 执行该脚本
+cat > /etc/os-release << "EOF"
+NAME="Linux From Scratch"
+VERSION="10.0"
+ID=lfs
+PRETTY_NAME="Linux From Scratch 10.0"
+VERSION_CODENAME="ZHJ0125"
+EOF
+```
+
+请务必对 `DISTRIB_CODENAME` 和 `VERSION_CODENAME` 字段进行某种自定义，以使系统独一无二。
+
+### 11.2 重新启动
+
+既然我们已经说过了，让我们继续第一次启动我们闪亮的新 LFS 安装！首先退出chroot环境：
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# logout
+root@ubuntu:~# 
+```
+
+然后卸载虚拟文件系统：
+
+```sh
+root@ubuntu:~# umount -v $LFS/dev/pts
+umount: /mnt/lfs/dev/pts unmounted
+root@ubuntu:~# umount -v $LFS/dev
+umount: /mnt/lfs/dev unmounted
+root@ubuntu:~# umount -v $LFS/run
+umount: /mnt/lfs/run unmounted
+root@ubuntu:~# umount -v $LFS/proc
+umount: /mnt/lfs/proc unmounted
+root@ubuntu:~# umount -v $LFS/sys
+umount: /mnt/lfs/sys unmounted
+```
+
+如果创建了多个分区，请在卸载主分区之前卸载其他分区，如下所示：
+
+```sh
+root@ubuntu:~# umount -v $LFS/usr
+umount: /mnt/lfs/usr: not mounted.
+root@ubuntu:~# umount -v $LFS/home
+umount: /mnt/lfs/home: not mounted.
+root@ubuntu:~# umount -v $LFS
+umount: /mnt/lfs: target is busy.
+root@ubuntu:~# umount -v $LFS
+umount: /mnt/lfs: target is busy.
+```
+
+卸载 LFS 文件系统本身：
+
+```sh
+# 如果出现卸载磁盘失败的情况，如下面所示：
+root@ubuntu:~# umount -v $LFS
+umount: /mnt/lfs: target is busy.
+# 此时可以使用 lsof /mnt/lfs 查看磁盘被占用的情况
+# 或者尽量关闭所有可能占用磁盘的应用，如终端应用，关闭之后再运行以下命令：
+zhj@ubuntu:~$ sudo umount -v /mnt/lfs/
+umount: /mnt/lfs/ unmounted
+```
+
+假设 GRUB 引导加载程序按照前面所述进行设置，菜单设置为自动引导LFS 10.0。
+
+重新启动完成后，LFS 系统就可以使用了，并且可能会添加更多软件以满足您的需求。
+
+现在，使用以下命令重新启动系统：
+
+```sh
+shutdown -r now
+```
+
+终于！
+
+LFS系统构建结束了！
+
+End
