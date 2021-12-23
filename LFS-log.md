@@ -10427,11 +10427,6 @@ cat > /etc/fstab << "EOF"
 #                                                              order
 
 /dev/sdb1      /            ext4     defaults            1     1
-proc           /proc        proc     nosuid,noexec,nodev 0     0
-sysfs          /sys         sysfs    nosuid,noexec,nodev 0     0
-devpts         /dev/pts     devpts   gid=5,mode=620      0     0
-tmpfs          /run         tmpfs    defaults            0     0
-devtmpfs       /dev         devtmpfs mode=0755,nosuid    0     0
 
 # End /etc/fstab
 EOF
@@ -10654,7 +10649,7 @@ sys     3m10.346s
   DEPMOD  5.8.3
 ```
 
-如果主机系统有一个单独的 /boot 分区，下面复制的文件应该放在那里。最简单的方法是在继续之前将主机上的 /boot（在 chroot 之外）绑定到 `/mnt/lfs/boot`。在主机系统中使用 root 用户执行：
+如果主机系统有一个单独的 /boot 分区，下面复制的文件应该放在那里。最简单的方法是在继续之前将主机上的 /boot（在 chroot 之外）绑定到 `/mnt/lfs/boot`。**在宿主机系统中使用 root 用户执行**：
 
 ```sh
 # 执行以下步骤：
@@ -10686,7 +10681,7 @@ System.map是内核的符号文件。它映射内核 API 中每个函数的函�
 
 ```sh
 (lfs chroot) root:/sources/linux-5.8.3# install -d /usr/share/doc/linux-5.8.3
-(lfs chroot) root:/sources/linux-5.8.3# cp -r Documentation/* /usr/share/doc/linux-5.8.3 
+(lfs chroot) root:/sources/linux-5.8.3# cp -r Documentation/* /usr/share/doc/linux-5.8.3
 ```
 
 #### 10.3.2 配置 Linux 内核模块加载顺序
@@ -10710,18 +10705,32 @@ install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true
 EOF
 ```
 
+删除软件包
+
+```sh
+(lfs chroot) root:/sources/linux-5.8.3# cd ..
+(lfs chroot) root:/sources# rm -rf linux-5.8.3
+```
+
 ### 10.4 使用 GRUB 设置引导过程
 
 我在此处创建了快照！
 
 #### 10.4.3 设置配置
 
-将 GRUB 文件安装到 `/boot/grub` 并设置引导轨道：
+~~将 GRUB 文件安装到 `/boot/grub` 并设置引导轨道：~~
 
 ```sh
-(lfs chroot) root:/sources/linux-5.8.3# grub-install /dev/sdb
+# 以下命令会丢失宿主机的引导文件，不要执行！
+(lfs chroot) root:/sources/linux-5.8.3# grub-install /dev/sdb (不要执行)
 Installing for i386-pc platform.
 Installation finished. No error reported.
+```
+
+**备份宿主机的 `/boot/grub/grub.cfg` 文件**
+
+```sh
+(lfs chroot) root:/sources# mv /boot/grub/grub.cfg /boot/grub/grub.cfg.bak
 ```
 
 #### 10.4.4 创建 GRUB 配置文件
