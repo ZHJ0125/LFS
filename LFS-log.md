@@ -10718,6 +10718,12 @@ EOF
 
 #### 10.4.3 设置配置
 
+**备份宿主机的 `/boot/grub/grub.cfg` 文件**
+
+```sh
+(lfs chroot) root:/sources# cp /boot/grub/grub.cfg /boot/grub/grub.cfg.bak
+```
+
 ~~将 GRUB 文件安装到 `/boot/grub` 并设置引导轨道：~~
 
 ```sh
@@ -10725,12 +10731,6 @@ EOF
 (lfs chroot) root:/sources/linux-5.8.3# grub-install /dev/sdb (不要执行)
 Installing for i386-pc platform.
 Installation finished. No error reported.
-```
-
-**备份宿主机的 `/boot/grub/grub.cfg` 文件**
-
-```sh
-(lfs chroot) root:/sources# mv /boot/grub/grub.cfg /boot/grub/grub.cfg.bak
 ```
 
 #### 10.4.4 创建 GRUB 配置文件
