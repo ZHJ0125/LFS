@@ -4908,7 +4908,9 @@ passwd: password changed.
 
 GCC 包含 GNU 编译器集合，其中包括 C 和 C++ 编译器。
 
-注意：此包较大，配置时间较长
+‼️ 注意：GCC软件包较大，配置时间非常长 (文档说有 102SBU，**实际测试时耗大约6小时**)
+
+请一定要耐心等待 ~~
 
 解压软件包
 
@@ -4969,26 +4971,93 @@ sys     3m58.435s
 设置以非特权用户身份测试结果，但不要因错误而停止：
 
 ```sh
-# 以下测试命令非常耗时！
+# 以下测试命令非常耗时！实测耗时约6小时，请耐心等待~~
 (lfs chroot) root:/sources/gcc-10.2.0/build# chown -Rv tester . 
 (lfs chroot) root:/sources/gcc-10.2.0/build# su tester -c "PATH=$PATH make -k check"
+
+# 运行结束后输出以下信息：
+make[3]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[2]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[1]: Leaving directory '/sources/gcc-10.2.0/build'
+make: *** [Makefile:2350: do-check] Error 2
+make: Target 'check' not remade because of errors.
+(lfs chroot) root:/sources/gcc-10.2.0/build# 
 ```
 
 要接收测试套件结果的摘要，请运行：
 
 ```sh
-../contrib/test_summary
+(lfs chroot) root:/sources/gcc-10.2.0/build# ../contrib/test_summary
 ```
 
 如果只想看摘要，将输出用管道送至 `grep -A7 Summ`，即 `../contrib/test_summary | grep -A7 Summ`
 
-结果可以与位于 http://www.linuxfromscratch.org/lfs/build-logs/10.0/ 和 https://gcc.gnu.org/ml/gcc-testresults/ 的结果进行比较。
+我执行了 `../contrib/test_summary | grep -A7 Summ` 命令，输出以下内容：
 
-已知与 get_time 相关的六个测试失败。这些显然与 en_HK 语言环境有关。
+```sh
+(lfs chroot) root:/sources/gcc-10.2.0/build# ../contrib/test_summary | grep -A7 Summ
+                === g++ Summary ===
+
+# of expected passes            191448
+# of unexpected failures        17
+# of expected failures          709
+# of unresolved testcases       1
+# of unsupported tests          7994
+/sources/gcc-10.2.0/build/gcc/xg++  version 10.2.0 (GCC) 
+--
+                === gcc Summary ===
+
+# of expected passes            149288
+# of unexpected failures        7
+# of expected failures          695
+# of unsupported tests          2221
+/sources/gcc-10.2.0/build/gcc/xgcc  version 10.2.0 (GCC) 
+
+--
+                === libatomic Summary ===
+
+# of expected passes            54
+                === libgomp tests ===
+
+
+Running target unix
+
+                === libgomp Summary ===
+
+# of expected passes            2664
+# of expected failures          2
+# of unsupported tests          302
+                === libitm tests ===
+
+
+--
+                === libitm Summary ===
+
+# of expected passes            42
+# of expected failures          3
+# of unsupported tests          1
+                === libstdc++ tests ===
+
+
+--
+                === libstdc++ Summary ===
+
+# of expected passes            14233
+# of unexpected failures        7
+# of expected failures          93
+# of unsupported tests          343
+
+Compiler version: 10.2.0 (GCC) 
+(lfs chroot) root:/sources/gcc-10.2.0/build# 
+```
+
+结果可以与位于 https://www.linuxfromscratch.org/lfs/build-logs/10.0/i5-6600K/test-logs/824-gcc-10.2.0 的结果进行比较。
+
+已知与 get_time 相关的六个测试失败。这些与 en_HK 语言环境有关。
 
 此外，已知与以下文件相关的以下测试因 glibc-2.32 失败：asan_test.C、co-ret-17-void-ret-coro.C、pr95519-05-gro.C、pr80166.c。
 
-一些意外的失败总是无法避免的。 GCC 开发人员通常知道这些问题，但尚未解决。除非测试结果与上述 URL 中的结果有很大不同，否则可以安全地继续。
+一些意外的失败总是无法避免的。 GCC 开发人员通常知道这些问题，但尚未解决。**除非测试结果与上述 URL 中的结果有很大不同，否则可以安全地继续。**
 
 安装软件包并删除不需要的目录：
 
@@ -4996,37 +5065,49 @@ sys     3m58.435s
 time { make install && rm -rf /usr/lib/gcc/$(gcc -dumpmachine)/10.2.0/include-fixed/bits/; }
 
 # 安装完成后输出以下信息：
+make[4]: Nothing to be done for 'install-data-am'.
+make[4]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[3]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[2]: Leaving directory '/sources/gcc-10.2.0/build/x86_64-pc-linux-gnu/libatomic'
+make[1]: Leaving directory '/sources/gcc-10.2.0/build'
 
+real    0m41.493s
+user    0m11.331s
+sys     0m25.439s
 ```
 
 GCC 构建目录现在归 tester 所有，安装的头文件目录（及其内容）的所有权将不正确。将所有权更改为 root 用户和组：
 
 ```sh
-chown -v -R root:root /usr/lib/gcc/*linux-gnu/10.2.0/include{,-fixed}
+(lfs chroot) root:/sources/gcc-10.2.0/build# chown -v -R root:root /usr/lib/gcc/*linux-gnu/10.2.0/include{,-fixed}
 ```
 
 出于“历史”原因，创建 FHS 所需的符号链接。
 
 ```sh
-ln -sv ../usr/bin/cpp /lib
+(lfs chroot) root:/sources/gcc-10.2.0/build# ln -sv ../usr/bin/cpp /lib
+'/lib/cpp' -> '../usr/bin/cpp'
 ```
 
 添加兼容性符号链接以启用具有链接时间优化 (LTO) 的构建程序：
 
 ```sh
-install -v -dm755 /usr/lib/bfd-plugins
-ln -sfv ../../libexec/gcc/$(gcc -dumpmachine)/10.2.0/liblto_plugin.so /usr/lib/bfd-plugins/
+(lfs chroot) root:/sources/gcc-10.2.0/build# install -v -dm755 /usr/lib/bfd-plugins
+install: creating directory '/usr/lib/bfd-plugins'
+(lfs chroot) root:/sources/gcc-10.2.0/build# ln -sfv ../../libexec/gcc/$(gcc -dumpmachine)/10.2.0/liblto_plugin.so /usr/lib/bfd-plugins/
+'/usr/lib/bfd-plugins/liblto_plugin.so' -> '../../libexec/gcc/x86_64-pc-linux-gnu/10.2.0/liblto_plugin.so'
 ```
 
 现在我们的最终工具链已经到位，再次确保编译和链接按预期工作很重要。我们通过执行一些健全性检查来做到这一点：
 
 ```sh
-echo 'int main(){}' > dummy.c
-cc dummy.c -v -Wl,--verbose &> dummy.log
-readelf -l a.out | grep ': /lib'
+(lfs chroot) root:/sources/gcc-10.2.0/build# echo 'int main(){}' > dummy.c
+(lfs chroot) root:/sources/gcc-10.2.0/build# cc dummy.c -v -Wl,--verbose &> dummy.log
+(lfs chroot) root:/sources/gcc-10.2.0/build# readelf -l a.out | grep ': /lib'
+      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
 ```
 
-应该没有错误，上一个命令的输出将是（允许动态链接器名称中特定于平台的差异）：
+如果没有错误，上一个命令的输出将是（允许动态链接器名称中特定于平台的差异）：
 
 ```sh
 [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
@@ -5035,7 +5116,10 @@ readelf -l a.out | grep ': /lib'
 现在确保我们设置为使用正确的启动文件：
 
 ```sh
-grep -o '/usr/lib.*/crt[1in].*succeeded' dummy.log
+(lfs chroot) root:/sources/gcc-10.2.0/build# grep -o '/usr/lib.*/crt[1in].*succeeded' dummy.log
+/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../lib/crt1.o succeeded
+/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../lib/crti.o succeeded
+/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../lib/crtn.o succeeded
 ```
 
 上一条命令的输出应该是：
@@ -5051,7 +5135,12 @@ grep -o '/usr/lib.*/crt[1in].*succeeded' dummy.log
 验证编译器是否正在搜索正确的头文件：
 
 ```sh
-grep -B4 '^ /usr/include' dummy.log
+(lfs chroot) root:/sources/gcc-10.2.0/build# grep -B4 '^ /usr/include' dummy.log
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/include
+ /usr/local/include
+ /usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0/include-fixed
+ /usr/include
 ```
 
 此命令应返回以下输出：
@@ -5069,7 +5158,15 @@ grep -B4 '^ /usr/include' dummy.log
 接下来，验证新链接器是否与正确的搜索路径一起使用：
 
 ```sh
-grep 'SEARCH.*/usr/lib' dummy.log |sed 's|; |\n|g'
+(lfs chroot) root:/sources/gcc-10.2.0/build# grep 'SEARCH.*/usr/lib' dummy.log |sed 's|; |\n|g'
+SEARCH_DIR("/usr/x86_64-pc-linux-gnu/lib64")
+SEARCH_DIR("/usr/local/lib64")
+SEARCH_DIR("/lib64")
+SEARCH_DIR("/usr/lib64")
+SEARCH_DIR("/usr/x86_64-pc-linux-gnu/lib")
+SEARCH_DIR("/usr/local/lib")
+SEARCH_DIR("/lib")
+SEARCH_DIR("/usr/lib");
 ```
 
 对包含带有 `-linux-gnu` 组件的路径的引用应该被忽略，上一个命令的输出应该是：
@@ -5101,7 +5198,8 @@ SEARCH_DIR("/usr/lib");
 接下来确保我们使用了正确的 libc：
 
 ```sh
-grep "/lib.*/libc.so.6 " dummy.log
+(lfs chroot) root:/sources/gcc-10.2.0/build# grep "/lib.*/libc.so.6 " dummy.log
+attempt to open /lib/libc.so.6 succeeded
 ```
 
 上一条命令的输出应该是：
@@ -5113,7 +5211,8 @@ attempt to open /lib/libc.so.6 succeeded
 确保 GCC 使用正确的动态链接器：
 
 ```sh
-grep found dummy.log
+(lfs chroot) root:/sources/gcc-10.2.0/build# grep found dummy.log
+found ld-linux-x86-64.so.2 at /lib/ld-linux-x86-64.so.2
 ```
 
 上一个命令的输出应该是（允许动态链接器名称中特定于平台的差异）：
@@ -5127,20 +5226,29 @@ found ld-linux-x86-64.so.2 at /lib/ld-linux-x86-64.so.2
 一切正常后，清理测试文件：
 
 ```sh
-rm -v dummy.c a.out dummy.log
+(lfs chroot) root:/sources/gcc-10.2.0/build# rm -v dummy.c a.out dummy.log
+removed 'dummy.c'
+removed 'a.out'
+removed 'dummy.log'
 ```
 
 最后，移动一个错位的文件：
 
 ```sh
-mkdir -pv /usr/share/gdb/auto-load/usr/lib
-mv -v /usr/lib/*gdb.py /usr/share/gdb/auto-load/usr/lib
+(lfs chroot) root:/sources/gcc-10.2.0/build# mkdir -pv /usr/share/gdb/auto-load/usr/lib
+mkdir: created directory '/usr/share/gdb'
+mkdir: created directory '/usr/share/gdb/auto-load'
+mkdir: created directory '/usr/share/gdb/auto-load/usr'
+mkdir: created directory '/usr/share/gdb/auto-load/usr/lib'
+(lfs chroot) root:/sources/gcc-10.2.0/build# mv -v /usr/lib/*gdb.py /usr/share/gdb/auto-load/usr/lib
+renamed '/usr/lib/libstdc++.so.6.0.28-gdb.py' -> '/usr/share/gdb/auto-load/usr/lib/libstdc++.so.6.0.28-gdb.py'
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/gcc-10.2.0/build# cd ../..
+(lfs chroot) root:/sources# rm -rf gcc-10.2.0
 ```
 
 ### 8.27 安装 Pkg-config-0.29.2
@@ -5150,7 +5258,8 @@ pkg-config 包含一个工具，用于在包安装的配置和制作阶段将包
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf pkg-config-0.29.2.tar.gz 
+(lfs chroot) root:/sources# cd pkg-config-0.29.2
 ```
 
 配置编译并检查
@@ -5162,7 +5271,15 @@ time { ./configure --prefix=/usr       \
             --docdir=/usr/share/doc/pkg-config-0.29.2 && make && make check; }
 
 # 检查完毕后输出以下信息：
+===================
+All 30 tests passed
+===================
+make[2]: Leaving directory '/sources/pkg-config-0.29.2/check'
+make[1]: Leaving directory '/sources/pkg-config-0.29.2/check'
 
+real    1m22.676s
+user    1m1.624s
+sys     0m15.836s
 ```
 
 安装软件包
@@ -5171,12 +5288,20 @@ time { ./configure --prefix=/usr       \
 time { make install; }
 
 # 安装完毕后输出以下信息：
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/pkg-config-0.29.2/check'
+make[1]: Leaving directory '/sources/pkg-config-0.29.2/check'
+
+real    0m0.799s
+user    0m0.510s
+sys     0m0.179s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/pkg-config-0.29.2# cd ..
+(lfs chroot) root:/sources# rm -rf pkg-config-0.29.2
 ```
 
 ### 8.28 安装 Ncurses-6.2
@@ -5186,13 +5311,14 @@ Ncurses 包含用于独立于终端处理字符屏幕的库。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf ncurses-6.2.tar.gz 
+(lfs chroot) root:/sources# cd ncurses-6.2
 ```
 
 禁止安装不由 configure 处理的静态库：
 
 ```sh
-sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
+(lfs chroot) root:/sources/ncurses-6.2# sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
 ```
 
 配置并编译安装
@@ -5207,50 +5333,79 @@ time { ./configure --prefix=/usr    \
             --enable-widec && make && make install; }
 
 # 安装完成后输出信息：
+installing ./cursesapp.h in /usr/include
+installing ./cursesf.h in /usr/include
+installing ./cursesm.h in /usr/include
+installing ./cursesp.h in /usr/include
+installing ./cursesw.h in /usr/include
+installing ./cursslk.h in /usr/include
+installing etip.h in /usr/include
+make[1]: Leaving directory '/sources/ncurses-6.2/c++'
 
+real    1m47.320s
+user    1m17.706s
+sys     0m19.340s
 ```
 
 将共享库移动到 /lib 目录，它们应该驻留在那里：
 
 ```sh
-mv -v /usr/lib/libncursesw.so.6* /lib
+(lfs chroot) root:/sources/ncurses-6.2# mv -v /usr/lib/libncursesw.so.6* /lib
+renamed '/usr/lib/libncursesw.so.6' -> '/lib/libncursesw.so.6'
+renamed '/usr/lib/libncursesw.so.6.2' -> '/lib/libncursesw.so.6.2'
 ```
 
 由于库已被移动，一个符号链接指向一个不存在的文件。重新创建它：
 
 ```sh
-ln -sfv ../../lib/$(readlink /usr/lib/libncursesw.so) /usr/lib/libncursesw.so
+(lfs chroot) root:/sources/ncurses-6.2# ln -sfv ../../lib/$(readlink /usr/lib/libncursesw.so) /usr/lib/libncursesw.so
+'/usr/lib/libncursesw.so' -> '../../lib/libncursesw.so.6'
 ```
 
 许多应用程序仍然希望链接器能够找到非宽字符 Ncurses 库。通过符号链接和链接器脚本，诱使此类应用程序与宽字符库链接：
 
 ```sh
+# 执行以下脚本
 for lib in ncurses form panel menu ; do
     rm -vf                    /usr/lib/lib${lib}.so
     echo "INPUT(-l${lib}w)" > /usr/lib/lib${lib}.so
     ln -sfv ${lib}w.pc        /usr/lib/pkgconfig/${lib}.pc
 done
+
+# 执行之后的输出信息 (不要重复执行以下代码)：
+(lfs chroot) root:/sources/ncurses-6.2# for lib in ncurses form panel menu ; do
+>     rm -vf                    /usr/lib/lib${lib}.so
+>     echo "INPUT(-l${lib}w)" > /usr/lib/lib${lib}.so
+>     ln -sfv ${lib}w.pc        /usr/lib/pkgconfig/${lib}.pc
+> done
+removed '/usr/lib/libncurses.so'
+'/usr/lib/pkgconfig/ncurses.pc' -> 'ncursesw.pc'
+'/usr/lib/pkgconfig/form.pc' -> 'formw.pc'
+'/usr/lib/pkgconfig/panel.pc' -> 'panelw.pc'
+'/usr/lib/pkgconfig/menu.pc' -> 'menuw.pc'
 ```
 
 最后，确保在构建时寻找 `-lcurses` 的旧应用程序仍然可以构建：
 
 ```sh
-rm -vf                     /usr/lib/libcursesw.so
-echo "INPUT(-lncursesw)" > /usr/lib/libcursesw.so
-ln -sfv libncurses.so      /usr/lib/libcurses.so
+(lfs chroot) root:/sources/ncurses-6.2# rm -vf /usr/lib/libcursesw.so
+(lfs chroot) root:/sources/ncurses-6.2# echo "INPUT(-lncursesw)" > /usr/lib/libcursesw.so
+(lfs chroot) root:/sources/ncurses-6.2# ln -sfv libncurses.so /usr/lib/libcurses.so
+'/usr/lib/libcurses.so' -> 'libncurses.so'
 ```
 
 如果需要，请安装 Ncurses 文档：
 
 ```sh
-mkdir -v       /usr/share/doc/ncurses-6.2
-cp -v -R doc/* /usr/share/doc/ncurses-6.2
+(lfs chroot) root:/sources/ncurses-6.2# mkdir -v /usr/share/doc/ncurses-6.2
+mkdir: created directory '/usr/share/doc/ncurses-6.2'
+(lfs chroot) root:/sources/ncurses-6.2# cp -v -R doc/* /usr/share/doc/ncurses-6.2
 ```
 
 注意：以上代码说明不会创建非宽字符 Ncurses 库，因为从源代码编译安装的任何包都不会在运行时链接到它们。但是，唯一已知的与非宽字符 Ncurses 库链接的纯二进制应用程序需要版本 5。如果由于某些纯二进制应用程序或要与 LSB 兼容而必须拥有此类库，请使用以下命令再次构建包：
 
 ```sh
-# 我不运行以下命令
+# 执行以下命令
 make distclean
 ./configure --prefix=/usr    \
             --with-shared    \
@@ -5260,6 +5415,23 @@ make distclean
             --with-abi-version=5 
 make sources libs
 cp -av lib/lib*.so.5* /usr/lib
+
+# 最后一条命令执行的结果如下：
+'lib/libform.so.5' -> '/usr/lib/libform.so.5'
+'lib/libform.so.5.9' -> '/usr/lib/libform.so.5.9'
+'lib/libmenu.so.5' -> '/usr/lib/libmenu.so.5'
+'lib/libmenu.so.5.9' -> '/usr/lib/libmenu.so.5.9'
+'lib/libncurses.so.5' -> '/usr/lib/libncurses.so.5'
+'lib/libncurses.so.5.9' -> '/usr/lib/libncurses.so.5.9'
+'lib/libpanel.so.5' -> '/usr/lib/libpanel.so.5'
+'lib/libpanel.so.5.9' -> '/usr/lib/libpanel.so.5.9'
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/ncurses-6.2# cd ..
+(lfs chroot) root:/sources# rm -rf ncurses-6.2
 ```
 
 ### 8.29 安装 Sed-4.8
@@ -5269,7 +5441,8 @@ Sed 包含一个流编辑器。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf sed-4.8.tar.xz 
+(lfs chroot) root:/sources# cd sed-4.8
 ```
 
 配置并编译代码和 HTML 文档
@@ -5278,28 +5451,55 @@ Sed 包含一个流编辑器。
 time { ./configure --prefix=/usr --bindir=/bin && make && make html; }
 
 # 编译完成后输出以下内容：
+make[2]: Entering directory '/sources/sed-4.8/gnulib-tests'
+make[2]: Nothing to be done for 'html-am'.
+make[2]: Leaving directory '/sources/sed-4.8/gnulib-tests'
+make[1]: Leaving directory '/sources/sed-4.8/gnulib-tests'
 
+real    0m52.683s
+user    0m32.202s
+sys     0m11.508s
 ```
 
 若要进行测试，请执行：
 
 ```sh
-chown -Rv tester .
-su tester -c "PATH=$PATH make check"
+(lfs chroot) root:/sources/sed-4.8# chown -Rv tester .
+(lfs chroot) root:/sources/sed-4.8# su tester -c "PATH=$PATH make check"
+
+# 最后一条命令的执行结果：
+============================================================================
+Testsuite summary for GNU sed 4.8
+============================================================================
+# TOTAL: 178
+# PASS:  157
+# SKIP:  21
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[6]: Leaving directory '/sources/sed-4.8/gnulib-tests'
+make[5]: Leaving directory '/sources/sed-4.8/gnulib-tests'
+make[4]: Leaving directory '/sources/sed-4.8/gnulib-tests'
+make[3]: Leaving directory '/sources/sed-4.8/gnulib-tests'
+make[2]: Leaving directory '/sources/sed-4.8/gnulib-tests'
+make[1]: Leaving directory '/sources/sed-4.8'
 ```
 
 安装软件包及其文档：
 
 ```sh
-make install
-install -d -m755           /usr/share/doc/sed-4.8
-install -m644 doc/sed.html /usr/share/doc/sed-4.8
+(lfs chroot) root:/sources/sed-4.8# make install
+(lfs chroot) root:/sources/sed-4.8# install -d -m755 /usr/share/doc/sed-4.8
+(lfs chroot) root:/sources/sed-4.8# install -m644 doc/sed.html /usr/share/doc/sed-4.8
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/sed-4.8# cd ..
+(lfs chroot) root:/sources# rm -rf sed-4.8
 ```
 
 ### 8.30 安装 Psmisc-23.3
@@ -5309,7 +5509,8 @@ Psmisc 包含用于显示有关正在运行进程的信息的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf psmisc-23.3.tar.xz 
+(lfs chroot) root:/sources# cd psmisc-23.3
 ```
 
 配置并编译安装
@@ -5318,20 +5519,31 @@ Psmisc 包含用于显示有关正在运行进程的信息的程序。
 time { ./configure --prefix=/usr && make && make install; }
 
 # 安装完成后输出信息：
+make[4]: Leaving directory '/sources/psmisc-23.3'
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/psmisc-23.3'
+make[2]: Leaving directory '/sources/psmisc-23.3'
+make[1]: Leaving directory '/sources/psmisc-23.3'
 
+real    0m13.287s
+user    0m8.342s
+sys     0m3.418s
 ```
 
 最后，将 killall 和 fuser 程序移动到 FHS 指定的位置：
 
 ```sh
-mv -v /usr/bin/fuser   /bin
-mv -v /usr/bin/killall /bin
+(lfs chroot) root:/sources/psmisc-23.3# mv -v /usr/bin/fuser /bin
+renamed '/usr/bin/fuser' -> '/bin/fuser'
+(lfs chroot) root:/sources/psmisc-23.3# mv -v /usr/bin/killall /bin
+renamed '/usr/bin/killall' -> '/bin/killall'
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/psmisc-23.3# cd ..
+(lfs chroot) root:/sources# rm -rf psmisc-23.3
 ```
 
 ### 8.31 安装 Gettext-0.21
@@ -5341,7 +5553,8 @@ Gettext 包含用于国际化和本地化的实用程序。这些允许使用 NL
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf gettext-0.21.tar.xz 
+(lfs chroot) root:/sources# cd gettext-0.21
 ```
 
 配置编译并检查
@@ -5352,7 +5565,47 @@ time { ./configure --prefix=/usr  \
             --docdir=/usr/share/doc/gettext-0.21 && make && make check; }
 
 # 检查完成后输出信息：
+============================================================================
+Testsuite summary for gettext-tools 0.21
+============================================================================
+# TOTAL: 266
+# PASS:  252
+# SKIP:  14
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[7]: Leaving directory '/sources/gettext-0.21/gettext-tools/gnulib-tests'
+make[6]: Leaving directory '/sources/gettext-0.21/gettext-tools/gnulib-tests'
+make[5]: Leaving directory '/sources/gettext-0.21/gettext-tools/gnulib-tests'
+make[4]: Leaving directory '/sources/gettext-0.21/gettext-tools/gnulib-tests'
+make[3]: Leaving directory '/sources/gettext-0.21/gettext-tools/gnulib-tests'
+Making check in examples
+make[3]: Entering directory '/sources/gettext-0.21/gettext-tools/examples'
+Making check in po
+make[4]: Entering directory '/sources/gettext-0.21/gettext-tools/examples/po'
+make[4]: Nothing to be done for 'check'.
+make[4]: Leaving directory '/sources/gettext-0.21/gettext-tools/examples/po'
+make[4]: Entering directory '/sources/gettext-0.21/gettext-tools/examples'
+make[4]: Nothing to be done for 'check-am'.
+make[4]: Leaving directory '/sources/gettext-0.21/gettext-tools/examples'
+make[3]: Leaving directory '/sources/gettext-0.21/gettext-tools/examples'
+Making check in doc
+make[3]: Entering directory '/sources/gettext-0.21/gettext-tools/doc'
+make[3]: Nothing to be done for 'check'.
+make[3]: Leaving directory '/sources/gettext-0.21/gettext-tools/doc'
+make[3]: Entering directory '/sources/gettext-0.21/gettext-tools'
+make[3]: Leaving directory '/sources/gettext-0.21/gettext-tools'
+make[2]: Leaving directory '/sources/gettext-0.21/gettext-tools'
+make[2]: Entering directory '/sources/gettext-0.21'
+make[2]: Nothing to be done for 'check-am'.
+make[2]: Leaving directory '/sources/gettext-0.21'
+make[1]: Leaving directory '/sources/gettext-0.21'
 
+real    12m59.211s
+user    9m42.016s
+sys     2m52.736s
 ```
 
 安装软件包
@@ -5361,18 +5614,34 @@ time { ./configure --prefix=/usr  \
 time { make install; }
 
 # 安装完成后输出信息：
+make[4]: Leaving directory '/sources/gettext-0.21/gettext-tools'
+make[3]: Leaving directory '/sources/gettext-0.21/gettext-tools'
+make[2]: Leaving directory '/sources/gettext-0.21/gettext-tools'
+make[2]: Entering directory '/sources/gettext-0.21'
+make[3]: Entering directory '/sources/gettext-0.21'
+make[3]: Nothing to be done for 'install-exec-am'.
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/gettext-0.21'
+make[2]: Leaving directory '/sources/gettext-0.21'
+make[1]: Leaving directory '/sources/gettext-0.21'
+
+real    0m30.462s
+user    0m16.538s
+sys     0m8.840s
 ```
 
 执行最后操作
 
 ```sh
-chmod -v 0755 /usr/lib/preloadable_libintl.so
+(lfs chroot) root:/sources/gettext-0.21# chmod -v 0755 /usr/lib/preloadable_libintl.so
+mode of '/usr/lib/preloadable_libintl.so' changed from 0644 (rw-r--r--) to 0755 (rwxr-xr-x)
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/gettext-0.21# cd ..
+(lfs chroot) root:/sources# rm -rf gettext-0.21
 ```
 
 ### 8.32 安装 Bison-3.7.1
@@ -5382,7 +5651,8 @@ Bison 包含一个解析器生成器。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf bison-3.7.1.tar.xz 
+(lfs chroot) root:/sources# cd bison-3.7.1
 ```
 
 配置编译并检查
@@ -5391,7 +5661,19 @@ Bison 包含一个解析器生成器。
 time { ./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.7.1 && make && make check; }
 
 # 检查完成后输出信息：
+## ------------- ##
+## Test results. ##
+## ------------- ##
 
+617 tests were successful.
+43 tests were skipped.
+make[3]: Leaving directory '/sources/bison-3.7.1'
+make[2]: Leaving directory '/sources/bison-3.7.1'
+make[1]: Leaving directory '/sources/bison-3.7.1'
+
+real    21m30.589s
+user    19m8.776s
+sys     2m5.324s
 ```
 
 安装软件包
@@ -5400,12 +5682,20 @@ time { ./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.7.1 && make && 
 time { make install; }
 
 # 安装完成后输出信息：
+make[3]: Leaving directory '/sources/bison-3.7.1'
+make[2]: Leaving directory '/sources/bison-3.7.1'
+make[1]: Leaving directory '/sources/bison-3.7.1'
+
+real    0m2.989s
+user    0m1.614s
+sys     0m0.891s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/bison-3.7.1# cd ..
+(lfs chroot) root:/sources# rm -rf bison-3.7.1
 ```
 
 ### 8.33 安装 Grep-3.4
@@ -5415,7 +5705,8 @@ Grep 包含用于搜索文件内容的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf grep-3.4.tar.xz 
+(lfs chroot) root:/sources# cd grep-3.4
 ```
 
 配置编译并检查
@@ -5424,7 +5715,29 @@ Grep 包含用于搜索文件内容的程序。
 time { ./configure --prefix=/usr --bindir=/bin && make && make check; }
 
 # 检查完成后输出信息：
+============================================================================
+Testsuite summary for GNU grep 3.4
+============================================================================
+# TOTAL: 185
+# PASS:  177
+# SKIP:  8
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[5]: Leaving directory '/sources/grep-3.4/gnulib-tests'
+make[4]: Leaving directory '/sources/grep-3.4/gnulib-tests'
+make[3]: Leaving directory '/sources/grep-3.4/gnulib-tests'
+make[2]: Leaving directory '/sources/grep-3.4/gnulib-tests'
+make[1]: Leaving directory '/sources/grep-3.4/gnulib-tests'
+make[1]: Entering directory '/sources/grep-3.4'
+make[1]: Leaving directory '/sources/grep-3.4'
+  GEN      public-submodule-commit
 
+real    2m31.568s
+user    1m49.638s
+sys     0m28.150s
 ```
 
 安装软件包
@@ -5433,12 +5746,20 @@ time { ./configure --prefix=/usr --bindir=/bin && make && make check; }
 time { make install; }
 
 # 安装完成后输出信息：
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/grep-3.4'
+make[1]: Leaving directory '/sources/grep-3.4'
+
+real    0m1.538s
+user    0m1.037s
+sys     0m0.323s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/grep-3.4# cd ..
+(lfs chroot) root:/sources# rm -rf grep-3.4
 ```
 
 ### 8.34 安装 Bash-5.0
@@ -5446,13 +5767,33 @@ time { make install; }
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf bash-5.0.tar.gz 
+(lfs chroot) root:/sources# cd bash-5.0
 ```
 
 合并一些上游开发者的修复：
 
 ```sh
-patch -Np1 -i ../bash-5.0-upstream_fixes-1.patch
+(lfs chroot) root:/sources/bash-5.0# patch -Np1 -i ../bash-5.0-upstream_fixes-1.patch
+patching file bashhist.c
+patching file bashline.c
+patching file builtins/evalstring.c
+patching file builtins/shopt.def
+patching file command.h
+patching file execute_cmd.c
+patching file jobs.c
+patching file lib/glob/glob.c
+patching file lib/glob/glob.h
+patching file lib/glob/glob_loop.c
+patching file lib/readline/histfile.c
+patching file parser.h
+patching file parse.y
+patching file patchlevel.h
+patching file pathexp.c
+patching file subst.c
+patching file tests/varenv.right
+patching file variables.c
+patching file y.tab.c
 ```
 
 准备配置并编译
@@ -5464,13 +5805,25 @@ time { ./configure --prefix=/usr             \
             --with-installed-readline && make; }
 
 # 编译完成后输出的信息：
+-rwxr-xr-x 1 root root 3786904 Dec 22 20:48 bash
+size bash
+   text    data     bss     dec     hex filename
+ 866879   15832   55832  938543   e522f bash
+make[1]: Entering directory '/sources/bash-5.0/support'
+rm -f man2html.o
+gcc -c  -DHAVE_CONFIG_H -DSHELL  -I/sources/bash-5.0 -I..   -g -O2 man2html.c
+gcc  -DHAVE_CONFIG_H -DSHELL  -I/sources/bash-5.0 -I..   -g -O2 man2html.o -o man2html -ldl 
+make[1]: Leaving directory '/sources/bash-5.0/support'
 
+real    1m23.054s
+user    0m58.441s
+sys     0m13.810s
 ```
 
 要准备测试，请确保 tester 用户可以写入源代码树：
 
 ```sh
-chown -Rv tester .
+(lfs chroot) root:/sources/bash-5.0# chown -Rv tester .
 ```
 
 现在，以 tester 用户身份运行测试：
@@ -5479,22 +5832,45 @@ chown -Rv tester .
 su tester << EOF
 PATH=$PATH make tests < $(tty)
 EOF
+
+# 测试完毕后输出的一些信息：
+run-type
+run-varenv
+run-vredir
+14,16d13
+< bad foo 1
+< bad foo 2
+< bad foo 3
 ```
 
 安装软件包并将主可执行文件移动到 /bin：
 
 ```sh
-make install
-mv -vf /usr/bin/bash /bin
+time { make install && mv -vf /usr/bin/bash /bin; }
+
+# 安装完成后输出的信息：
+make[1]: Leaving directory '/sources/bash-5.0/examples/loadables'
+renamed '/usr/bin/bash' -> '/bin/bash'
+
+real    0m5.608s
+user    0m3.975s
+sys     0m1.267s
 ```
 
 运行新编译的 bash 程序（替换当前正在执行的程序）：
 
 ```sh
-exec /bin/bash --login +h
+(lfs chroot) root:/sources/bash-5.0# exec /bin/bash --login +h
 ```
 
 上述命令使用的参数使 bash 进程成为交互式登录 shell，并继续禁用散列，以便在新程序可用时找到它们。
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/bash-5.0# cd ..
+(lfs chroot) root:/sources# rm -rf bash-5.0
+```
 
 ### 8.35 安装 Libtool-2.4.6
 
@@ -5503,17 +5879,53 @@ Libtool 包包含 GNU 通用库支持脚本。它将使用共享库的复杂性�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf libtool-2.4.6.tar.xz 
+(lfs chroot) root:/sources# cd libtool-2.4.6
 ```
 
-配置编译并检查，注意在具有多核的系统上，可以显著减少 libtool 的测试时间。为此，请将 TESTSUITEFLAGS=-j<N> 附加到上面的行。例如，使用 -j4 可以将测试时间减少 60% 以上。
+配置编译并检查，注意在具有多核的系统上，可以显著减少 libtool 的测试时间。为此，请将 `TESTSUITEFLAGS=-j<N>` 附加到上面的行。例如，使用 `-j4` 可以将测试时间减少 60% 以上。
 
 ```sh
 time { ./configure --prefix=/usr && make && make -j4 check; }
 
 # 检查完成后输出信息：
+## ------------- ##
+## Test results. ##
+## ------------- ##
 
+ERROR: 139 tests were run,
+64 failed (59 expected failures).
+31 tests were skipped.
+## -------------------------- ##
+## testsuite.log was created. ##
+## -------------------------- ##
+
+Please send `tests/testsuite.log' and all information you think might help:
+
+   To: <bug-libtool@gnu.org>
+   Subject: [GNU Libtool 2.4.6] testsuite: 123 124 125 126 130 failed
+
+You may investigate any problem if you feel able to do so, in which
+case the test suite provides a good starting point.  Its output may
+be found below `tests/testsuite.dir'.
+
+make[3]: *** [Makefile:2459: check-local] Error 1
+make[3]: Leaving directory '/sources/libtool-2.4.6'
+make[2]: *** [Makefile:1897: check-am] Error 2
+make[2]: Leaving directory '/sources/libtool-2.4.6'
+make[1]: *** [Makefile:1606: check-recursive] Error 1
+make[1]: Leaving directory '/sources/libtool-2.4.6'
+make: *** [Makefile:1899: check] Error 2
+
+real    7m57.093s
+user    6m10.914s
+sys     2m2.160s
+(lfs chroot) root:/sources/libtool-2.4.6# 
 ```
+
+可以看到，我在139项测试中，有64项失败了。我们暂时忽略这些问题。
+
+由于循环依赖，已知有五个测试会在 LFS 构建环境中失败，但如果在安装 automake 后重新检查，所有测试都会通过。
 
 安装软件包
 
@@ -5521,12 +5933,20 @@ time { ./configure --prefix=/usr && make && make -j4 check; }
 time { make install; }
 
 # 安装完成后输出信息：
+make[3]: Leaving directory '/sources/libtool-2.4.6'
+make[2]: Leaving directory '/sources/libtool-2.4.6'
+make[1]: Leaving directory '/sources/libtool-2.4.6'
+
+real    0m1.204s
+user    0m0.753s
+sys     0m0.352s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/libtool-2.4.6# cd ..
+(lfs chroot) root:/sources# rm -rf libtool-2.4.6
 ```
 
 ### 8.36 安装 GDBM-1.18.1
@@ -5536,13 +5956,14 @@ GDBM 包包含 GNU 数据库管理器。它是一个使用可扩展散列的数�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf gdbm-1.18.1.tar.gz 
+(lfs chroot) root:/sources# cd gdbm-1.18.1
 ```
 
-修复由 gcc-10 首次发现的问题：
+修复在 gcc-10 上首次发现的问题：
 
 ```sh
-sed -r -i '/^char.*parseopt_program_(doc|args)/d' src/parseopt.c
+(lfs chroot) root:/sources/gdbm-1.18.1# sed -r -i '/^char.*parseopt_program_(doc|args)/d' src/parseopt.c
 ```
 
 配置编译并检查
@@ -5553,7 +5974,19 @@ time { ./configure --prefix=/usr  \
             --enable-libgdbm-compat && make && make check; }
 
 # 检查完成后输出信息：
+## ------------- ##
+## Test results. ##
+## ------------- ##
 
+All 30 tests were successful.
+make[2]: Leaving directory '/sources/gdbm-1.18.1/tests'
+make[1]: Leaving directory '/sources/gdbm-1.18.1/tests'
+make[1]: Entering directory '/sources/gdbm-1.18.1'
+make[1]: Leaving directory '/sources/gdbm-1.18.1'
+
+real    0m28.880s
+user    0m19.805s
+sys     0m6.527s
 ```
 
 安装软件包
@@ -5562,12 +5995,24 @@ time { ./configure --prefix=/usr  \
 time { make install; }
 
 # 安装完成后输出信息：
+make[1]: Leaving directory '/sources/gdbm-1.18.1/tests'
+make[1]: Entering directory '/sources/gdbm-1.18.1'
+make[2]: Entering directory '/sources/gdbm-1.18.1'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/gdbm-1.18.1'
+make[1]: Leaving directory '/sources/gdbm-1.18.1'
+
+real    0m1.264s
+user    0m0.740s
+sys     0m0.297s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/gdbm-1.18.1# cd ..
+(lfs chroot) root:/sources# rm -rf gdbm-1.18.1
 ```
 
 ### 8.37 安装 Gperf-3.1
@@ -5577,7 +6022,8 @@ Gperf 从一个键集生成一个完美的散列函数。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf gperf-3.1.tar.gz 
+(lfs chroot) root:/sources# cd gperf-3.1
 ```
 
 配置编译并检查，如果同时运行多个测试（-j 选项大于 1），则测试会失败。要测试结果，请执行：
@@ -5586,7 +6032,15 @@ Gperf 从一个键集生成一个完美的散列函数。
 time { ./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.1 && make && make -j1 check; }
 
 # 检查完成后输出信息：
+make[1]: Leaving directory '/sources/gperf-3.1/tests'
+cd doc; make check
+make[1]: Entering directory '/sources/gperf-3.1/doc'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/gperf-3.1/doc'
 
+real    0m12.109s
+user    0m7.916s
+sys     0m2.965s
 ```
 
 安装软件包
@@ -5595,12 +6049,20 @@ time { ./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.1 && make && ma
 time { make install; }
 
 # 安装完成后输出信息：
+mkdir -p -- /usr/share/doc/gperf-3.1
+/usr/bin/install -c -m 644 ./gperf.html /usr/share/doc/gperf-3.1/gperf.html
+make[1]: Leaving directory '/sources/gperf-3.1/doc'
+
+real    0m0.099s
+user    0m0.044s
+sys     0m0.025s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/gperf-3.1# cd ..
+(lfs chroot) root:/sources# rm -rf gperf-3.1
 ```
 
 ### 8.38 安装 Expat-2.2.9
@@ -5610,7 +6072,8 @@ Expat 包含一个用于解析 XML 的面向流的 C 库。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf expat-2.2.9.tar.xz 
+(lfs chroot) root:/sources# cd expat-2.2.9
 ```
 
 配置编译并检查：
@@ -5621,7 +6084,39 @@ time { ./configure --prefix=/usr    \
             --docdir=/usr/share/doc/expat-2.2.9 && make && make check; }
 
 # 检查完成后输出信息：
+============================================================================
+Testsuite summary for expat 2.2.9
+============================================================================
+# TOTAL: 2
+# PASS:  2
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[4]: Leaving directory '/sources/expat-2.2.9/tests'
+make[3]: Leaving directory '/sources/expat-2.2.9/tests'
+make[2]: Leaving directory '/sources/expat-2.2.9/tests'
+Making check in benchmark
+make[2]: Entering directory '/sources/expat-2.2.9/tests/benchmark'
+make[2]: Nothing to be done for 'check'.
+make[2]: Leaving directory '/sources/expat-2.2.9/tests/benchmark'
+make[1]: Leaving directory '/sources/expat-2.2.9/tests'
+Making check in xmlwf
+make[1]: Entering directory '/sources/expat-2.2.9/xmlwf'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/expat-2.2.9/xmlwf'
+Making check in doc
+make[1]: Entering directory '/sources/expat-2.2.9/doc'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/expat-2.2.9/doc'
+make[1]: Entering directory '/sources/expat-2.2.9'
+make[1]: Leaving directory '/sources/expat-2.2.9'
 
+real    0m32.063s
+user    0m25.939s
+sys     0m4.536s
 ```
 
 安装软件包
@@ -5630,18 +6125,29 @@ time { ./configure --prefix=/usr    \
 time { make install; }
 
 # 安装完成后输出信息：
+make[2]: Leaving directory '/sources/expat-2.2.9'
+make[1]: Leaving directory '/sources/expat-2.2.9'
+
+real    0m0.577s
+user    0m0.371s
+sys     0m0.104s
 ```
 
 如果需要，请安装文档：
 
 ```sh
-install -v -m644 doc/*.{html,png,css} /usr/share/doc/expat-2.2.9
+(lfs chroot) root:/sources/expat-2.2.9# install -v -m644 doc/*.{html,png,css} /usr/share/doc/expat-2.2.9
+'doc/reference.html' -> '/usr/share/doc/expat-2.2.9/reference.html'
+'doc/expat.png' -> '/usr/share/doc/expat-2.2.9/expat.png'
+'doc/valid-xhtml10.png' -> '/usr/share/doc/expat-2.2.9/valid-xhtml10.png'
+'doc/style.css' -> '/usr/share/doc/expat-2.2.9/style.css'
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/expat-2.2.9# cd .. 
+(lfs chroot) root:/sources# rm -rf expat-2.2.9
 ```
 
 ### 8.39 安装 Inetutils-1.9.4
@@ -5651,7 +6157,8 @@ Inetutils 包含用于基本网络的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf inetutils-1.9.4.tar.xz 
+(lfs chroot) root:/sources# cd inetutils-1.9.4
 ```
 
 配置编译并检查：
@@ -5668,7 +6175,28 @@ time { ./configure --prefix=/usr \
             --disable-servers && make && make check; }
 
 # 检查完成后输出信息：
+============================================================================
+Testsuite summary for GNU inetutils 1.9.4
+============================================================================
+# TOTAL: 10
+# PASS:  10
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[5]: Leaving directory '/sources/inetutils-1.9.4/tests'
+make[4]: Leaving directory '/sources/inetutils-1.9.4/tests'
+make[3]: Leaving directory '/sources/inetutils-1.9.4/tests'
+make[2]: Leaving directory '/sources/inetutils-1.9.4/tests'
+make[2]: Entering directory '/sources/inetutils-1.9.4'
+make[2]: Leaving directory '/sources/inetutils-1.9.4'
+make[1]: Leaving directory '/sources/inetutils-1.9.4'
 
+real    1m46.111s
+user    1m1.221s
+sys     0m26.128s
 ```
 
 注意：测试 `libls.sh` 在初始 chroot 环境中可能会失败，但如果在 LFS 系统完成后重新运行该测试，它就会通过。如果主机系统没有 ipv6 功能，一项测试 `ping-localhost.sh` 将失败。
@@ -5679,19 +6207,35 @@ time { ./configure --prefix=/usr \
 time { make install; }
 
 # 安装完成后输出信息：
+make[3]: Entering directory '/sources/inetutils-1.9.4'
+make[3]: Nothing to be done for 'install-exec-am'.
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/inetutils-1.9.4'
+make[2]: Leaving directory '/sources/inetutils-1.9.4'
+make[1]: Leaving directory '/sources/inetutils-1.9.4'
+
+real    0m2.032s
+user    0m1.450s
+sys     0m0.386s
 ```
 
 移动一些程序，以便在 /usr 不可访问时它们可用：
 
 ```sh
-mv -v /usr/bin/{hostname,ping,ping6,traceroute} /bin
-mv -v /usr/bin/ifconfig /sbin
+(lfs chroot) root:/sources/inetutils-1.9.4# mv -v /usr/bin/{hostname,ping,ping6,traceroute} /bin
+renamed '/usr/bin/hostname' -> '/bin/hostname'
+renamed '/usr/bin/ping' -> '/bin/ping'
+renamed '/usr/bin/ping6' -> '/bin/ping6'
+renamed '/usr/bin/traceroute' -> '/bin/traceroute'
+(lfs chroot) root:/sources/inetutils-1.9.4# mv -v /usr/bin/ifconfig /sbin
+renamed '/usr/bin/ifconfig' -> '/sbin/ifconfig'
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/inetutils-1.9.4# cd ..
+(lfs chroot) root:/sources# rm -rf inetutils-1.9.4
 ```
 
 ### 8.40 安装 Perl-5.32.0
@@ -5701,14 +6245,15 @@ Perl 包含实用提取和报告语言。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf perl-5.32.0.tar.xz 
+(lfs chroot) root:/sources# cd perl-5.32.0
 ```
 
 这个版本的 Perl 现在构建了 Compress::Raw::Zlib 和 Compress::Raw::BZip2 模块。默认情况下，Perl 将使用源的内部副本进行构建。发出以下命令，以便 Perl 使用系统上安装的库：
 
 ```sh
-export BUILD_ZLIB=False
-export BUILD_BZIP2=0
+(lfs chroot) root:/sources/perl-5.32.0# export BUILD_ZLIB=False
+(lfs chroot) root:/sources/perl-5.32.0# export BUILD_BZIP2=0
 ```
 
 要完全控制 Perl 的设置方式，您可以从以下命令中删除 `-des` 选项并手动选择此包的构建方式。或者，使用完全如下的命令来使用 Perl 自动检测的默认值，同时编译并测试：
@@ -5731,20 +6276,27 @@ time { sh Configure -des                                  \
              -Dusethreads && make && make test; }
 
 # 测试完成后输出的信息：
+All tests successful.
+Elapsed: 1253 sec
+u=16.05  s=11.51  cu=771.78  cs=140.66  scripts=2554  tests=1220614
 
+real    27m32.933s
+user    18m56.738s
+sys     3m16.717s
 ```
 
 安装软件包并清理：
 
 ```sh
-make install
-unset BUILD_ZLIB BUILD_BZIP2
+(lfs chroot) root:/sources/perl-5.32.0# make install
+(lfs chroot) root:/sources/perl-5.32.0# unset BUILD_ZLIB BUILD_BZIP2
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/perl-5.32.0# cd ..
+(lfs chroot) root:/sources# rm -rf perl-5.32.0
 ```
 
 ### 8.41 安装 XML::Parser-2.46
@@ -5754,7 +6306,8 @@ XML::Parser 模块是 James Clark 的 XML 解析器 Expat 的 Perl 接口。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf XML-Parser-2.46.tar.gz 
+(lfs chroot) root:/sources# cd XML-Parser-2.46
 ```
 
 配置编译并测试：
@@ -5763,7 +6316,13 @@ XML::Parser 模块是 James Clark 的 XML 解析器 Expat 的 Perl 接口。
 time { perl Makefile.PL && make && make test; }
 
 # 测试完成后输出信息：
+All tests successful.
+Files=15, Tests=140,  1 wallclock secs ( 0.07 usr  0.06 sys +  0.99 cusr  0.14 csys =  1.26 CPU)
+Result: PASS
 
+real    0m5.430s
+user    0m4.764s
+sys     0m0.599s
 ```
 
 安装软件包
@@ -5772,12 +6331,21 @@ time { perl Makefile.PL && make && make test; }
 time { make install; }
 
 # 安装完成后输出信息：
+Installing /usr/share/man/man3/XML::Parser::Expat.3
+Installing /usr/share/man/man3/XML::Parser::Style::Subs.3
+Installing /usr/share/man/man3/XML::Parser::Style::Tree.3
+Appending installation info to /usr/lib/perl5/5.32/core_perl/perllocal.pod
+
+real    0m0.507s
+user    0m0.374s
+sys     0m0.100s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/XML-Parser-2.46# cd ..
+(lfs chroot) root:/sources# rm -rf XML-Parser-2.46
 ```
 
 ### 8.42 安装 Intltool-0.51.0
@@ -5787,13 +6355,14 @@ Intltool 是一种国际化工具，用于从源文件中提取可翻译的字�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf intltool-0.51.0.tar.gz 
+(lfs chroot) root:/sources# cd intltool-0.51.0
 ```
 
 首先修复一个由 perl-5.22 及更高版本引起的警告：
 
 ```sh
-sed -i 's:\\\${:\\\$\\{:' intltool-update.in
+(lfs chroot) root:/sources/intltool-0.51.0# sed -i 's:\\\${:\\\$\\{:' intltool-update.in
 ```
 
 由于所有的反斜杠，上面的正则表达式看起来不寻常。它的作用是在序列 `'\${'` 中的右大括号字符之前添加一个反斜杠，从而得到 `'\$\{'`。
@@ -5804,7 +6373,32 @@ sed -i 's:\\\${:\\\$\\{:' intltool-update.in
 time { ./configure --prefix=/usr && make && make check; }
 
 # 测试完成后输出信息：
+============================================================================
+Testsuite summary for intltool 0.51.0
+============================================================================
+# TOTAL: 1
+# PASS:  1
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[4]: Leaving directory '/sources/intltool-0.51.0/tests'
+make[3]: Leaving directory '/sources/intltool-0.51.0/tests'
+make[2]: Leaving directory '/sources/intltool-0.51.0/tests'
+make[1]: Leaving directory '/sources/intltool-0.51.0/tests'
+Making check in doc
+make[1]: Entering directory '/sources/intltool-0.51.0/doc'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/intltool-0.51.0/doc'
+make[1]: Entering directory '/sources/intltool-0.51.0'
+make[1]: Nothing to be done for 'check-am'.
+make[1]: Leaving directory '/sources/intltool-0.51.0'
 
+real    0m4.296s
+user    0m2.721s
+sys     0m0.637s
 ```
 
 安装软件包
@@ -5813,12 +6407,21 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install && install -v -Dm644 doc/I18N-HOWTO /usr/share/doc/intltool-0.51.0/I18N-HOWTO; }
 
 # 安装完成后输出信息：
+make[2]: Leaving directory '/sources/intltool-0.51.0'
+make[1]: Leaving directory '/sources/intltool-0.51.0'
+install: creating directory '/usr/share/doc/intltool-0.51.0'
+'doc/I18N-HOWTO' -> '/usr/share/doc/intltool-0.51.0/I18N-HOWTO'
+
+real    0m0.163s
+user    0m0.077s
+sys     0m0.067s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/intltool-0.51.0# cd ..
+(lfs chroot) root:/sources# rm -rf intltool-0.51.0
 ```
 
 ### 8.43 安装 Autoconf-2.69
@@ -5828,13 +6431,14 @@ Autoconf 包含用于生成可自动配置源代码的 shell 脚本的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf autoconf-2.69.tar.xz 
+(lfs chroot) root:/sources# cd autoconf-2.69
 ```
 
 首先修复由 Perl 5.28 生成的错误。
 
 ```sh
-sed -i '361 s/{/\\{/' bin/autoscan.in
+(lfs chroot) root:/sources/autoconf-2.69# sed -i '361 s/{/\\{/' bin/autoscan.in
 ```
 
 配置编译并测试：
@@ -5843,8 +6447,40 @@ sed -i '361 s/{/\\{/' bin/autoscan.in
 time { ./configure --prefix=/usr && make && make check; }
 
 # 测试完成后输出信息：
+## ------------- ##
+## Test results. ##
+## ------------- ##
 
+ERROR: 450 tests were run,
+137 failed (4 expected failures).
+53 tests were skipped.
+## -------------------------- ##
+## testsuite.log was created. ##
+## -------------------------- ##
+
+Please send `tests/testsuite.log' and all information you think might help:
+
+   To: <bug-autoconf@gnu.org>
+   Subject: [GNU Autoconf 2.69] testsuite: 77 232 233 270 272 273 274 276 277 281 282 287 288 289 290 291 292 293 294 295 296 297 298 299 300 301 302 303 348 349 353 354 355 356 357 358 362 363 364 365 366 367 368 369 370 371 372 374 380 381 382 383 384 385 386 387 388 389 390 391 404 405 406 407 418 419 420 421 422 423 424 425 426 427 431 432 433 434 435 436 437 438 443 444 445 446 447 448 449 450 451 452 453 454 455 456 457 458 459 460 461 462 463 471 472 473 474 475 476 477 478 479 480 481 482 483 484 485 486 487 488 489 490 491 492 493 494 495 496 497 498 499 501 failed
+
+You may investigate any problem if you feel able to do so, in which
+case the test suite provides a good starting point.  Its output may
+be found below `tests/testsuite.dir'.
+
+make[3]: *** [Makefile:596: check-local] Error 1
+make[3]: Leaving directory '/sources/autoconf-2.69/tests'
+make[2]: *** [Makefile:411: check-am] Error 2
+make[2]: Leaving directory '/sources/autoconf-2.69/tests'
+make[1]: *** [Makefile:357: check-recursive] Error 1
+make[1]: Leaving directory '/sources/autoconf-2.69'
+make: *** [Makefile:665: check] Error 2
+
+real    12m22.859s
+user    8m29.387s
+sys     2m45.522s
 ```
+
+可以看到，以上编译测试过程出现了较多错误。在手册中已指出 `The test suite is currently broken by bash-5 and libtool-2.4.3. `，这说明测试套件有可能本身就存在问题，因此，对于以上编译测试中出现的问题，我们暂时忽略。
 
 安装软件包
 
@@ -5852,12 +6488,20 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后输出信息：
+make[3]: Leaving directory '/sources/autoconf-2.69/man'
+make[2]: Leaving directory '/sources/autoconf-2.69/man'
+make[1]: Leaving directory '/sources/autoconf-2.69'
+
+real    0m0.757s
+user    0m0.335s
+sys     0m0.277s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/autoconf-2.69# cd ..
+(lfs chroot) root:/sources# rm -rf autoconf-2.69
 ```
 
 ### 8.44 安装 Automake-1.16.2
@@ -5867,13 +6511,14 @@ Automake 包含用于生成用于 Autoconf 的 Makefile 的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf automake-1.16.2.tar.xz 
+(lfs chroot) root:/sources# cd automake-1.16.2
 ```
 
 修复失败的测试：
 
 ```sh
-sed -i "s/''/etags/" t/tags-lisp-space.sh
+(lfs chroot) root:/sources/automake-1.16.2# sed -i "s/''/etags/" t/tags-lisp-space.sh
 ```
 
 配置编译并测试，由于个别测试的内部延迟，使用 -j4 make 选项可以加快测试速度，即使在只有一个处理器的系统上也是如此。：
@@ -5882,7 +6527,23 @@ sed -i "s/''/etags/" t/tags-lisp-space.sh
 time { ./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.16.2 && make && make -j4 check; }
 
 # 测试完成后输出信息：
+============================================================================
+Testsuite summary for GNU Automake 1.16.2
+============================================================================
+# TOTAL: 2915
+# PASS:  2719
+# SKIP:  157
+# XFAIL: 39
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[2]: Leaving directory '/sources/automake-1.16.2'
+make[1]: Leaving directory '/sources/automake-1.16.2'
 
+real    40m37.297s
+user    67m38.496s
+sys     32m31.625s
 ```
 
 安装软件包
@@ -5891,12 +6552,34 @@ time { ./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.16.2 && make
 time { make install; }
 
 # 安装完成后输出信息：
+make  install-data-hook
+make[2]: Entering directory '/sources/automake-1.16.2'
+ chmod +x '/usr/share/automake-1.16/config.guess'
+ chmod +x '/usr/share/automake-1.16/config.sub'
+ chmod +x '/usr/share/automake-1.16/install-sh'
+ chmod +x '/usr/share/automake-1.16/mdate-sh'
+ chmod +x '/usr/share/automake-1.16/missing'
+ chmod +x '/usr/share/automake-1.16/mkinstalldirs'
+ chmod +x '/usr/share/automake-1.16/ylwrap'
+ chmod +x '/usr/share/automake-1.16/depcomp'
+ chmod +x '/usr/share/automake-1.16/compile'
+ chmod +x '/usr/share/automake-1.16/py-compile'
+ chmod +x '/usr/share/automake-1.16/ar-lib'
+ chmod +x '/usr/share/automake-1.16/test-driver'
+ chmod +x '/usr/share/automake-1.16/tap-driver.sh'
+make[2]: Leaving directory '/sources/automake-1.16.2'
+make[1]: Leaving directory '/sources/automake-1.16.2'
+
+real    0m0.642s
+user    0m0.352s
+sys     0m0.226s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/automake-1.16.2# cd ..
+(lfs chroot) root:/sources# rm -rf automake-1.16.2
 ```
 
 ### 8.45 安装 Kmod-27
@@ -5906,7 +6589,8 @@ Kmod 包含用于加载内核模块的库和实用程序
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf kmod-27.tar.xz 
+(lfs chroot) root:/sources# cd kmod-27
 ```
 
 配置编译并安装：
@@ -5920,18 +6604,18 @@ time { ./configure --prefix=/usr   \
             --with-zlib && make && make install; }
 
 # 测试完成后输出信息：
+make[2]: Nothing to be done for 'install-exec-am'.
+ /bin/mkdir -p '/usr/share/man/man5'
+ /usr/bin/install -c -m 644 depmod.d.5 modprobe.d.5 modules.dep.5 modules.dep.bin.5 '/usr/share/man/man5'
+ /bin/mkdir -p '/usr/share/man/man8'
+ /usr/bin/install -c -m 644 kmod.8 depmod.8 insmod.8 lsmod.8 rmmod.8 modprobe.8 modinfo.8 '/usr/share/man/man8'
 
+real    0m23.826s
+user    0m16.846s
+sys     0m5.751s
 ```
 
 这个包没有附带可以在 LFS chroot 环境中运行的测试套件。需要最小的 git 程序，并且一些测试不会在 git 存储库之外运行。
-
-安装软件包
-
-```sh
-time { make install; }
-
-# 安装完成后输出信息：
-```
 
 创建符号链接以与 Module-Init-Tools（以前处理 Linux 内核模块的包）兼容：
 
@@ -5940,14 +6624,23 @@ time { make install; }
 for target in depmod insmod lsmod modinfo modprobe rmmod; do
   ln -sfv ../bin/kmod /sbin/$target
 done
+# 执行完毕后会输出以下信息：
+'/sbin/depmod' -> '../bin/kmod'
+'/sbin/insmod' -> '../bin/kmod'
+'/sbin/lsmod' -> '../bin/kmod'
+'/sbin/modinfo' -> '../bin/kmod'
+'/sbin/modprobe' -> '../bin/kmod'
+'/sbin/rmmod' -> '../bin/kmod'
 # 创建链接
-ln -sfv kmod /bin/lsmod
+(lfs chroot) root:/sources/kmod-27# ln -sfv kmod /bin/lsmod
+'/bin/lsmod' -> 'kmod'
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/kmod-27# cd ..
+(lfs chroot) root:/sources# rm -rf kmod-27
 ```
 
 ### 8.46 安装 Libelf from Elfutils-0.180
@@ -5957,7 +6650,8 @@ Libelf 是一个用于处理 ELF（可执行和可链接格式）文件的库。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf elfutils-0.180.tar.bz2 
+(lfs chroot) root:/sources# cd elfutils-0.180
 ```
 
 配置编译并检查：
@@ -5966,21 +6660,36 @@ Libelf 是一个用于处理 ELF（可执行和可链接格式）文件的库。
 time { ./configure --prefix=/usr --disable-debuginfod --libdir=/lib && make && make check; }
 
 # 检查完成后输出信息：
+============================================================================
+Testsuite summary for elfutils 0.180
+============================================================================
+# TOTAL: 218
+# PASS:  213
+# SKIP:  5
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
 
+real    4m27.881s
+user    3m13.298s
+sys     0m52.794s
 ```
 
 只安装 Libelf：
 
 ```sh
-make -C libelf install
-install -vm644 config/libelf.pc /usr/lib/pkgconfig
-rm /lib/libelf.a
+(lfs chroot) root:/sources/elfutils-0.180# make -C libelf install
+(lfs chroot) root:/sources/elfutils-0.180# install -vm644 config/libelf.pc /usr/lib/pkgconfig
+(lfs chroot) root:/sources/elfutils-0.180# rm /lib/libelf.a
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/elfutils-0.180# cd ..
+(lfs chroot) root:/sources# rm -rf elfutils-0.180
 ```
 
 ### 8.47 安装 Libffi-3.3
@@ -5992,7 +6701,8 @@ Libffi 库为各种调用约定提供了可移植的高级编程接口。这允�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf libffi-3.3.tar.gz
+(lfs chroot) root:/sources# cd libffi-3.3
 ```
 
 配置编译并检查：
@@ -6001,7 +6711,27 @@ Libffi 库为各种调用约定提供了可移植的高级编程接口。这允�
 time { ./configure --prefix=/usr --disable-static --with-gcc-arch=native && make && make check; }
 
 # 检查完成后输出信息：
+                === libffi Summary ===
 
+# of expected passes            2284
+make[3]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu/testsuite'
+make[2]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu/testsuite'
+Making check in man
+make[2]: Entering directory '/sources/libffi-3.3/x86_64-pc-linux-gnu/man'
+make[2]: Nothing to be done for 'check'.
+make[2]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu/man'
+Making check in doc
+make[2]: Entering directory '/sources/libffi-3.3/x86_64-pc-linux-gnu/doc'
+make[2]: Nothing to be done for 'check'.
+make[2]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu/doc'
+make[2]: Entering directory '/sources/libffi-3.3/x86_64-pc-linux-gnu'
+make[2]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu'
+make[1]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu'
+
+real    7m51.231s
+user    6m59.217s
+sys     0m44.474s
+(lfs chroot) root:/sources/libffi-3.3# 
 ```
 
 安装软件包
@@ -6010,12 +6740,20 @@ time { ./configure --prefix=/usr --disable-static --with-gcc-arch=native && make
 time { make install; }
 
 # 安装完成后输出信息：
+make[3]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu'
+make[2]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu'
+make[1]: Leaving directory '/sources/libffi-3.3/x86_64-pc-linux-gnu'
+
+real    0m0.616s
+user    0m0.364s
+sys     0m0.151s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/libffi-3.3# cd ..
+(lfs chroot) root:/sources# rm -rf libffi-3.3
 ```
 
 ### 8.48 安装 OpenSSL-1.1.1g
@@ -6025,20 +6763,26 @@ OpenSSL 包含与加密相关的管理工具和库。这些对于为其他包提
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf openssl-1.1.1g.tar.gz 
+(lfs chroot) root:/sources# cd openssl-1.1.1g
 ```
 
 配置编译并检查：
 
 ```sh
-./config --prefix=/usr         \
+time { ./config --prefix=/usr  \
          --openssldir=/etc/ssl \
          --libdir=lib          \
          shared                \
          zlib-dynamic && make && make test; }
 
 # 检查完成后输出信息：
+Result: PASS
+make[1]: Leaving directory '/sources/openssl-1.1.1g'
 
+real    7m52.965s
+user    6m31.131s
+sys     1m11.118s
 ```
 
 已知一项测试 `30-test_afalg.t` 在某些内核配置上失败（它显然假设已选择了某些未指定的加密选项，我们可以忽略）。
@@ -6049,19 +6793,28 @@ OpenSSL 包含与加密相关的管理工具和库。这些对于为其他包提
 time { sed -i '/INSTALL_LIBS/s/libcrypto.a libssl.a//' Makefile && make MANSUFFIX=ssl install; }
 
 # 安装完成后输出信息：
+/usr/share/doc/openssl/html/man7/X25519.html
+/usr/share/doc/openssl/html/man7/X448.html -> /usr/share/doc/openssl/html/man7/X25519.html
+/usr/share/doc/openssl/html/man7/x509.html
+
+real    2m52.641s
+user    2m28.528s
+sys     0m19.168s
 ```
 
 如果需要，请安装文档：
 
 ```sh
-mv -v /usr/share/doc/openssl /usr/share/doc/openssl-1.1.1g
-cp -vfr doc/* /usr/share/doc/openssl-1.1.1g
+(lfs chroot) root:/sources/openssl-1.1.1g# mv -v /usr/share/doc/openssl /usr/share/doc/openssl-1.1.1g
+renamed '/usr/share/doc/openssl' -> '/usr/share/doc/openssl-1.1.1g'
+(lfs chroot) root:/sources/openssl-1.1.1g# cp -vfr doc/* /usr/share/doc/openssl-1.1.1g
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/openssl-1.1.1g# cd ..
+(lfs chroot) root:/sources# rm -rf openssl-1.1.1g
 ```
 
 ### 8.49 安装 Python-3.8.5
@@ -6071,37 +6824,50 @@ Python 3 包含 Python 开发环境。它对于面向对象编程、编写脚本
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf Python-3.8.5.tar.xz            
+(lfs chroot) root:/sources# cd Python-3.8.5
 ```
 
 配置编译并安装：
 
 ```sh
-./configure --prefix=/usr       \
-            --enable-shared     \
-            --with-system-expat \
-            --with-system-ffi   \
+time { ./configure --prefix=/usr \
+            --enable-shared      \
+            --with-system-expat  \
+            --with-system-ffi    \
             --with-ensurepip=yes && make && make install; }
 
 # 检查完成后输出信息：
+Processing /tmp/tmp74k0e_eh/setuptools-47.1.0-py3-none-any.whl
+Processing /tmp/tmp74k0e_eh/pip-20.1.1-py2.py3-none-any.whl
+Installing collected packages: setuptools, pip
+Successfully installed pip-20.1.1 setuptools-47.1.0
 
+real    6m10.517s
+user    5m31.379s
+sys     0m50.269s
 ```
 
-要测试结果，可以执行 `make test`。一些需要网络连接或附加包的测试被跳过。名为 `test_normalization` 的测试会失败，因为尚未完成网络配置。为了获得更全面的结果，可以在 BLFS 中重新安装 Python 3 时重新运行测试。(我不运行此次测试程序)
+要测试结果，可以执行 `make test`。一些需要网络连接或附加包的测试被跳过。名为 `test_normalization` 的测试会失败，因为尚未完成网络配置。为了获得更全面的结果，可以在 BLFS 中重新安装 Python3 时重新运行测试。(我不运行此次测试程序)
 
 更改权限并创建链接
 
 ```sh
-chmod -v 755 /usr/lib/libpython3.8.so
-chmod -v 755 /usr/lib/libpython3.so
-ln -sfv pip3.8 /usr/bin/pip3
+(lfs chroot) root:/sources/Python-3.8.5# chmod -v 755 /usr/lib/libpython3.8.so
+mode of '/usr/lib/libpython3.8.so' retained as 0755 (rwxr-xr-x)
+(lfs chroot) root:/sources/Python-3.8.5# chmod -v 755 /usr/lib/libpython3.so
+mode of '/usr/lib/libpython3.so' retained as 0755 (rwxr-xr-x)
+(lfs chroot) root:/sources/Python-3.8.5# ln -sfv pip3.8 /usr/bin/pip3
+'/usr/bin/pip3' -> 'pip3.8'
 ```
 
 如果需要，安装预先格式化的文档：
 
 ```sh
-install -v -dm755 /usr/share/doc/python-3.8.5/html
-
+(lfs chroot) root:/sources/Python-3.8.5# install -v -dm755 /usr/share/doc/python-3.8.5/html
+install: creating directory '/usr/share/doc/python-3.8.5'
+install: creating directory '/usr/share/doc/python-3.8.5/html'
+# 继续执行以下命令
 tar --strip-components=1  \
     --no-same-owner       \
     --no-same-permissions \
@@ -6112,7 +6878,8 @@ tar --strip-components=1  \
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/Python-3.8.5# cd ..
+(lfs chroot) root:/sources# rm -rf Python-3.8.5
 ```
 
 ### 8.50 安装 Ninja-1.10.0
@@ -6124,7 +6891,8 @@ Tips: 如果不使用 systemd，则 LFS 不严格要求此部分。然而，Ninj
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf ninja-1.10.0.tar.gz 
+(lfs chroot) root:/sources# cd ninja-1.10.0
 ```
 
 运行时，ninja 通常并行运行最大数量的进程。默认情况下，这是系统上的内核数加 2。在某些情况下，这可能会使 CPU 过热或使系统内存不足。如果从命令行运行，传递 -jN 参数会限制并行进程的数量，但有些包嵌入了 ninja 的执行，并没有传递 -j 参数。
@@ -6132,7 +6900,7 @@ Tips: 如果不使用 systemd，则 LFS 不严格要求此部分。然而，Ninj
 使用下面的可选过程允许用户通过环境变量 NINJAJOBS 限制并行进程的数量：
 
 ```sh
-export NINJAJOBS=4
+(lfs chroot) root:/sources/ninja-1.10.0# export NINJAJOBS=4
 ```
 
 以上命令将 ninja 限制为四个并行进程。
@@ -6140,6 +6908,7 @@ export NINJAJOBS=4
 如果需要，通过运行以下命令添加使用环境变量 NINJAJOBS 的功能：
 
 ```sh
+# 执行以下脚本
 sed -i '/int Guess/a \
   int   j = 0;\
   char* jobs = getenv( "NINJAJOBS" );\
@@ -6151,28 +6920,45 @@ sed -i '/int Guess/a \
 使用以下命令构建 Ninja：
 
 ```sh
-python3 configure.py --bootstrap
+(lfs chroot) root:/sources/ninja-1.10.0# python3 configure.py --bootstrap
+# 输出以下内容：
+bootstrapping ninja...
+warning: A compatible version of re2c (>= 0.11.3) was not found; changes to src/*.in.cc will not affect your build.
+wrote build.ninja.
+bootstrap complete.  rebuilding...
+[29/29] LINK ninja
 ```
 
 要测试结果，请执行：
 
 ```sh
-./ninja ninja_test
-./ninja_test --gtest_filter=-SubprocessTest.SetWithLots
+(lfs chroot) root:/sources/ninja-1.10.0# ./ninja ninja_test
+# 输出内容：
+[19/19] LINK ninja_test
+(lfs chroot) root:/sources/ninja-1.10.0# ./ninja_test --gtest_filter=-SubprocessTest.SetWithLots
+# 输出内容：
+[341/341] ElideMiddle.ElideInTheMiddle
+passed
 ```
 
 安装软件包
 
 ```sh
-install -vm755 ninja /usr/bin/
-install -vDm644 misc/bash-completion /usr/share/bash-completion/completions/ninja
-install -vDm644 misc/zsh-completion  /usr/share/zsh/site-functions/_ninja
+(lfs chroot) root:/sources/ninja-1.10.0# install -vm755 ninja /usr/bin/
+'ninja' -> '/usr/bin/ninja'
+(lfs chroot) root:/sources/ninja-1.10.0# install -vDm644 misc/bash-completion /usr/share/bash-completion/completions/ninja
+'misc/bash-completion' -> '/usr/share/bash-completion/completions/ninja'
+(lfs chroot) root:/sources/ninja-1.10.0# install -vDm644 misc/zsh-completion /usr/share/zsh/site-functions/_ninja
+install: creating directory '/usr/share/zsh'
+install: creating directory '/usr/share/zsh/site-functions'
+'misc/zsh-completion' -> '/usr/share/zsh/site-functions/_ninja'
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/ninja-1.10.0# cd ..
+(lfs chroot) root:/sources# rm -rf ninja-1.10.0
 ```
 
 ### 8.51 安装 Meson-0.55.0
@@ -6184,13 +6970,20 @@ Tips: 如果不使用 systemd，则 LFS 不严格要求此部分。然而，Ninj
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf meson-0.55.0.tar.gz 
+(lfs chroot) root:/sources# cd meson-0.55.0
 ```
 
 使用以下命令编译 Meson：
 
 ```sh
-python3 setup.py build
+(lfs chroot) root:/sources/meson-0.55.0# python3 setup.py build
+
+# 编译完成后输出：
+creating build/lib/mesonbuild/dependencies/data
+copying mesonbuild/dependencies/data/CMakeLists.txt -> build/lib/mesonbuild/dependencies/data
+copying mesonbuild/dependencies/data/CMakeListsLLVM.txt -> build/lib/mesonbuild/dependencies/data
+copying mesonbuild/dependencies/data/CMakePathInfo.txt -> build/lib/mesonbuild/dependencies/data
 ```
 
 此软件包不附带测试套件。
@@ -6198,14 +6991,26 @@ python3 setup.py build
 安装软件包
 
 ```sh
-python3 setup.py install --root=dest
-cp -rv dest/* /
+(lfs chroot) root:/sources/meson-0.55.0# python3 setup.py install --root=dest
+# 安装完成后输出：
+writing manifest file 'meson.egg-info/SOURCES.txt'
+Copying meson.egg-info to dest/usr/lib/python3.8/site-packages/meson-0.55.0-py3.8.egg-info
+running install_scripts
+Installing meson script to dest/usr/bin
+
+(lfs chroot) root:/sources/meson-0.55.0# cp -rv dest/* /
+# 完成后输出：
+'dest/usr/share/polkit-1' -> '/usr/share/polkit-1'
+'dest/usr/share/polkit-1/actions' -> '/usr/share/polkit-1/actions'
+'dest/usr/share/polkit-1/actions/com.mesonbuild.install.policy' -> '/usr/share/polkit-1/actions/com.mesonbuild.install.policy'
+'dest/usr/bin/meson' -> '/usr/bin/meson'
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/meson-0.55.0# cd ..
+(lfs chroot) root:/sources# rm -rf meson-0.55.0
 ```
 
 ### 8.52 安装 Coreutils-8.32
@@ -6215,13 +7020,43 @@ Coreutils 包含用于显示和设置基本系统特征的实用程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf coreutils-8.32.tar.xz 
+(lfs chroot) root:/sources# cd coreutils-8.32
 ```
 
 POSIX 要求来自 Coreutils 的程序即使在多字节语言环境中也能正确识别字符边界。以下补丁修复了这种不合规性和其他与国际化相关的错误。
 
 ```sh
-patch -Np1 -i ../coreutils-8.32-i18n-1.patch
+(lfs chroot) root:/sources/coreutils-8.32# patch -Np1 -i ../coreutils-8.32-i18n-1.patch
+patching file bootstrap.conf
+patching file configure.ac
+patching file lib/linebuffer.h
+patching file lib/mbfile.c
+patching file lib/mbfile.h
+patching file m4/mbfile.m4
+patching file src/cut.c
+patching file src/expand.c
+patching file src/expand-common.c
+patching file src/expand-common.h
+patching file src/fold.c
+patching file src/join.c
+patching file src/pr.c
+patching file src/sort.c
+patching file src/unexpand.c
+patching file src/uniq.c
+patching file tests/expand/mb.sh
+patching file tests/i18n/sort.sh
+patching file tests/local.mk
+patching file tests/misc/expand.pl
+patching file tests/misc/fold.pl
+patching file tests/misc/join.pl
+patching file tests/misc/sort-mb-tests.sh
+patching file tests/misc/sort-merge.pl
+patching file tests/misc/sort.pl
+patching file tests/misc/unexpand.pl
+patching file tests/misc/uniq.pl
+patching file tests/pr/pr-tests.pl
+patching file tests/unexpand/mb.sh
 ```
 
 注意：以前在此补丁中发现了许多错误。向 Coreutils 维护者报告新错误时，请先检查它们是否可以在没有此补丁的情况下重现。
@@ -6229,7 +7064,7 @@ patch -Np1 -i ../coreutils-8.32-i18n-1.patch
 禁止在某些机器上可以永远循环的测试：
 
 ```sh
-sed -i '/test.lock/s/^/#/' gnulib-tests/gnulib.mk
+(lfs chroot) root:/sources/coreutils-8.32# sed -i '/test.lock/s/^/#/' gnulib-tests/gnulib.mk
 ```
 
 配置并编译
@@ -6240,30 +7075,86 @@ time { autoreconf -fiv && FORCE_UNSAFE_CONFIGURE=1 ./configure \
             --enable-no-install-program=kill,uptime && make; }
 
 # 编译完成后输出以下信息：
+make[4]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[3]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[2]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[1]: Leaving directory '/sources/coreutils-8.32'
+
+real    4m19.931s
+user    3m1.109s
+sys     0m49.541s
 ```
 
 现在测试套件已准备好运行。首先，运行以 root 用户身份运行的测试：
 
 ```sh
-make NON_ROOT_USERNAME=tester check-root
+(lfs chroot) root:/sources/coreutils-8.32# make NON_ROOT_USERNAME=tester check-root
+
+# 完成后输出：
+============================================================================
+Testsuite summary for GNU coreutils 8.32
+============================================================================
+# TOTAL: 32
+# PASS:  19
+# SKIP:  13
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[5]: Leaving directory '/sources/coreutils-8.32'
+  GEN      check-README
+  GEN      check-duplicate-no-install
+  GEN      sc-avoid-builtin
+  GEN      sc-avoid-io
+  GEN      sc-avoid-non-zero
+  GEN      sc-avoid-path
+  GEN      sc-avoid-timezone
+  GEN      sc-avoid-zeroes
+  GEN      sc-exponent-grouping
+  GEN      sc-lower-case-var
+  GEN      check-texinfo
+make[4]: Leaving directory '/sources/coreutils-8.32'
+make[3]: Leaving directory '/sources/coreutils-8.32'
+make[2]: Leaving directory '/sources/coreutils-8.32'
+make[1]: Leaving directory '/sources/coreutils-8.32'
 ```
 
 接下来将切换至 tester 用户运行其余的测试。某些测试要求用户是多个组的成员。为了不跳过这些测试，添加一个临时组并使用户 tester 成为其中的一部分：
 
 ```sh
-echo "dummy:x:102:tester" >> /etc/group
+(lfs chroot) root:/sources/coreutils-8.32# echo "dummy:x:102:tester" >> /etc/group
 ```
 
 修复一些权限，以便非 root 用户可以编译和运行测试：
 
 ```sh
-chown -Rv tester .
+(lfs chroot) root:/sources/coreutils-8.32# chown -Rv tester .
 ```
 
 现在运行测试：
 
 ```sh
-su tester -c "PATH=$PATH make RUN_EXPENSIVE_TESTS=yes check"
+(lfs chroot) root:/sources/coreutils-8.32# su tester -c "PATH=$PATH make RUN_EXPENSIVE_TESTS=yes check"
+
+# 完成后输出：
+============================================================================
+Testsuite summary for GNU coreutils 8.32
+============================================================================
+# TOTAL: 345
+# PASS:  328
+# SKIP:  17
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[6]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[5]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[4]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[3]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[2]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[1]: Leaving directory '/sources/coreutils-8.32'
 ```
 
 已知 `test-getlogin` 测试在 LFS chroot 环境中失败。
@@ -6271,36 +7162,75 @@ su tester -c "PATH=$PATH make RUN_EXPENSIVE_TESTS=yes check"
 删除临时组：
 
 ```sh
-sed -i '/dummy/d' /etc/group
+(lfs chroot) root:/sources/coreutils-8.32# sed -i '/dummy/d' /etc/group
 ```
 
 安装软件包：
 
 ```sh
 make install
+
+# 安装完成后输出：
+Making install in .
+make[4]: Entering directory '/sources/coreutils-8.32/gnulib-tests'
+make[5]: Entering directory '/sources/coreutils-8.32/gnulib-tests'
+make[5]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[4]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[3]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[2]: Leaving directory '/sources/coreutils-8.32/gnulib-tests'
+make[1]: Leaving directory '/sources/coreutils-8.32'
 ```
 
 将程序移动到 FHS 指定的位置：
 
 ```sh
-mv -v /usr/bin/{cat,chgrp,chmod,chown,cp,date,dd,df,echo} /bin
-mv -v /usr/bin/{false,ln,ls,mkdir,mknod,mv,pwd,rm} /bin
-mv -v /usr/bin/{rmdir,stty,sync,true,uname} /bin
-mv -v /usr/bin/chroot /usr/sbin
-mv -v /usr/share/man/man1/chroot.1 /usr/share/man/man8/chroot.8
-sed -i 's/"1"/"8"/' /usr/share/man/man8/chroot.8
+(lfs chroot) root:/sources/coreutils-8.32# mv -v /usr/bin/{cat,chgrp,chmod,chown,cp,date,dd,df,echo} /bin
+renamed '/usr/bin/cat' -> '/bin/cat'
+renamed '/usr/bin/chgrp' -> '/bin/chgrp'
+renamed '/usr/bin/chmod' -> '/bin/chmod'
+renamed '/usr/bin/chown' -> '/bin/chown'
+renamed '/usr/bin/cp' -> '/bin/cp'
+renamed '/usr/bin/date' -> '/bin/date'
+renamed '/usr/bin/dd' -> '/bin/dd'
+renamed '/usr/bin/df' -> '/bin/df'
+renamed '/usr/bin/echo' -> '/bin/echo'
+(lfs chroot) root:/sources/coreutils-8.32# mv -v /usr/bin/{false,ln,ls,mkdir,mknod,mv,pwd,rm} /bin
+renamed '/usr/bin/false' -> '/bin/false'
+renamed '/usr/bin/ln' -> '/bin/ln'
+renamed '/usr/bin/ls' -> '/bin/ls'
+renamed '/usr/bin/mkdir' -> '/bin/mkdir'
+renamed '/usr/bin/mknod' -> '/bin/mknod'
+renamed '/usr/bin/mv' -> '/bin/mv'
+renamed '/usr/bin/pwd' -> '/bin/pwd'
+renamed '/usr/bin/rm' -> '/bin/rm'
+(lfs chroot) root:/sources/coreutils-8.32# mv -v /usr/bin/{rmdir,stty,sync,true,uname} /bin
+renamed '/usr/bin/rmdir' -> '/bin/rmdir'
+renamed '/usr/bin/stty' -> '/bin/stty'
+renamed '/usr/bin/sync' -> '/bin/sync'
+renamed '/usr/bin/true' -> '/bin/true'
+renamed '/usr/bin/uname' -> '/bin/uname'
+(lfs chroot) root:/sources/coreutils-8.32# mv -v /usr/bin/chroot /usr/sbin
+renamed '/usr/bin/chroot' -> '/usr/sbin/chroot'
+(lfs chroot) root:/sources/coreutils-8.32# mv -v /usr/share/man/man1/chroot.1 /usr/share/man/man8/chroot.8
+renamed '/usr/share/man/man1/chroot.1' -> '/usr/share/man/man8/chroot.8'
+(lfs chroot) root:/sources/coreutils-8.32# sed -i 's/"1"/"8"/' /usr/share/man/man8/chroot.8
 ```
 
 LFS-Bootscripts 包中的一些脚本依赖于 head、nice、sleep 和 touch。由于 /usr 在引导的早期和后期阶段可能不可用，这些二进制文件需要移动到根分区上以保持 FHS 合规性：
 
 ```sh
-mv -v /usr/bin/{head,nice,sleep,touch} /bin
+(lfs chroot) root:/sources/coreutils-8.32# mv -v /usr/bin/{head,nice,sleep,touch} /bin
+renamed '/usr/bin/head' -> '/bin/head'
+renamed '/usr/bin/nice' -> '/bin/nice'
+renamed '/usr/bin/sleep' -> '/bin/sleep'
+renamed '/usr/bin/touch' -> '/bin/touch'
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/coreutils-8.32# cd ..
+(lfs chroot) root:/sources# rm -rf coreutils-8.32
 ```
 
 ### 8.53 安装 Check-0.15.2
@@ -6310,7 +7240,8 @@ Check 是 C 的单元测试框架
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf check-0.15.2.tar.gz 
+(lfs chroot) root:/sources# cd check-0.15.2
 ```
 
 配置并编译检查：
@@ -6319,10 +7250,25 @@ Check 是 C 的单元测试框架
 time { ./configure --prefix=/usr --disable-static && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for Check 0.15.2
+============================================================================
+# TOTAL: 9
+# PASS:  9
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/check-0.15.2/tests'
+make[2]: Leaving directory '/sources/check-0.15.2/tests'
+make[1]: Leaving directory '/sources/check-0.15.2/tests'
 
+real    6m24.650s
+user    0m23.196s
+sys     0m7.285s
 ```
-
-请注意，检查测试套件可能需要相对较长（最多 4 个 SBU）的时间。
 
 安装软件包
 
@@ -6330,13 +7276,24 @@ time { ./configure --prefix=/usr --disable-static && make && make check; }
 time { make docdir=/usr/share/doc/check-0.15.2 install; }
 
 # 安装完成后显示内容如下：
+Making install in tests
+make[1]: Entering directory '/sources/check-0.15.2/tests'
+make[2]: Entering directory '/sources/check-0.15.2/tests'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/check-0.15.2/tests'
+make[1]: Leaving directory '/sources/check-0.15.2/tests'
 
+real    0m0.554s
+user    0m0.348s
+sys     0m0.179s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/check-0.15.2# cd ..
+(lfs chroot) root:/sources# rm -rf check-0.15.2
 ```
 
 ### 8.54 安装 Diffutils-3.7
@@ -6346,7 +7303,8 @@ Diffutils 包含显示文件或目录之间差异的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf diffutils-3.7.tar.xz 
+(lfs chroot) root:/sources# cd diffutils-3.7
 ```
 
 配置并编译检查：
@@ -6355,7 +7313,30 @@ Diffutils 包含显示文件或目录之间差异的程序。
 time { ./configure --prefix=/usr && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for GNU diffutils 3.7
+============================================================================
+# TOTAL: 173
+# PASS:  160
+# SKIP:  13
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[5]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[4]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[3]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[2]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[1]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[1]: Entering directory '/sources/diffutils-3.7'
+make[1]: Nothing to be done for 'check-am'.
+make[1]: Leaving directory '/sources/diffutils-3.7'
+  GEN      public-submodule-commit
 
+real    1m36.742s
+user    0m56.432s
+sys     0m18.539s
 ```
 
 安装软件包
@@ -6364,13 +7345,25 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[2]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[1]: Leaving directory '/sources/diffutils-3.7/gnulib-tests'
+make[1]: Entering directory '/sources/diffutils-3.7'
+make[2]: Entering directory '/sources/diffutils-3.7'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/diffutils-3.7'
+make[1]: Leaving directory '/sources/diffutils-3.7'
 
+real    0m1.356s
+user    0m0.913s
+sys     0m0.315s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/diffutils-3.7# cd ..
+(lfs chroot) root:/sources# rm -rf diffutils-3.7
 ```
 
 ### 8.55 安装 Gawk-5.1.0
@@ -6380,13 +7373,14 @@ Gawk 包含用于处理文本文件的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf gawk-5.1.0.tar.xz 
+(lfs chroot) root:/sources# cd gawk-5.1.0
 ```
 
 确保没有安装一些不需要的文件：
 
 ```sh
-sed -i 's/extras//' Makefile.in
+(lfs chroot) root:/sources/gawk-5.1.0# sed -i 's/extras//' Makefile.in
 ```
 
 配置并编译检查：
@@ -6395,7 +7389,17 @@ sed -i 's/extras//' Makefile.in
 time { ./configure --prefix=/usr && make && make check; }
 
 # 检查完成后显示内容如下：
+make[3]: Leaving directory '/sources/gawk-5.1.0/test'
+======== Done with MPFR tests ========
+make[3]: Entering directory '/sources/gawk-5.1.0/test'
+ALL TESTS PASSED
+make[3]: Leaving directory '/sources/gawk-5.1.0/test'
+make[2]: Leaving directory '/sources/gawk-5.1.0/test'
+make[1]: Leaving directory '/sources/gawk-5.1.0'
 
+real    1m31.024s
+user    0m56.196s
+sys     0m15.171s
 ```
 
 安装软件包
@@ -6404,20 +7408,53 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+Making install in test
+make[2]: Entering directory '/sources/gawk-5.1.0/test'
+make[3]: Entering directory '/sources/gawk-5.1.0/test'
+make[3]: Nothing to be done for 'install-exec-am'.
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/gawk-5.1.0/test'
+make[2]: Leaving directory '/sources/gawk-5.1.0/test'
+make[1]: Leaving directory '/sources/gawk-5.1.0'
 
+real    0m3.153s
+user    0m1.579s
+sys     0m1.000s
 ```
 
 如果需要，请安装文档：
 
 ```sh
-mkdir -v /usr/share/doc/gawk-5.1.0
-cp -v doc/{awkforai.txt,*.{eps,pdf,jpg}} /usr/share/doc/gawk-5.1.0
+(lfs chroot) root:/sources/gawk-5.1.0# mkdir -v /usr/share/doc/gawk-5.1.0
+mkdir: created directory '/usr/share/doc/gawk-5.1.0'
+(lfs chroot) root:/sources/gawk-5.1.0# cp -v doc/{awkforai.txt,*.{eps,pdf,jpg}} /usr/share/doc/gawk-5.1.0
+'doc/awkforai.txt' -> '/usr/share/doc/gawk-5.1.0/awkforai.txt'
+'doc/api-figure1.eps' -> '/usr/share/doc/gawk-5.1.0/api-figure1.eps'
+'doc/api-figure2.eps' -> '/usr/share/doc/gawk-5.1.0/api-figure2.eps'
+'doc/api-figure3.eps' -> '/usr/share/doc/gawk-5.1.0/api-figure3.eps'
+'doc/array-elements.eps' -> '/usr/share/doc/gawk-5.1.0/array-elements.eps'
+'doc/general-program.eps' -> '/usr/share/doc/gawk-5.1.0/general-program.eps'
+'doc/lflashlight.eps' -> '/usr/share/doc/gawk-5.1.0/lflashlight.eps'
+'doc/process-flow.eps' -> '/usr/share/doc/gawk-5.1.0/process-flow.eps'
+'doc/rflashlight.eps' -> '/usr/share/doc/gawk-5.1.0/rflashlight.eps'
+'doc/statist.eps' -> '/usr/share/doc/gawk-5.1.0/statist.eps'
+'doc/api-figure1.pdf' -> '/usr/share/doc/gawk-5.1.0/api-figure1.pdf'
+'doc/api-figure2.pdf' -> '/usr/share/doc/gawk-5.1.0/api-figure2.pdf'
+'doc/api-figure3.pdf' -> '/usr/share/doc/gawk-5.1.0/api-figure3.pdf'
+'doc/array-elements.pdf' -> '/usr/share/doc/gawk-5.1.0/array-elements.pdf'
+'doc/general-program.pdf' -> '/usr/share/doc/gawk-5.1.0/general-program.pdf'
+'doc/lflashlight.pdf' -> '/usr/share/doc/gawk-5.1.0/lflashlight.pdf'
+'doc/process-flow.pdf' -> '/usr/share/doc/gawk-5.1.0/process-flow.pdf'
+'doc/rflashlight.pdf' -> '/usr/share/doc/gawk-5.1.0/rflashlight.pdf'
+'doc/statist.pdf' -> '/usr/share/doc/gawk-5.1.0/statist.pdf'
+'doc/statist.jpg' -> '/usr/share/doc/gawk-5.1.0/statist.jpg'
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/gawk-5.1.0# cd ..
+(lfs chroot) root:/sources# rm -rf gawk-5.1.0
 ```
 
 ### 8.56 安装 Findutils-4.7.0
@@ -6427,7 +7464,8 @@ Findutils 包含查找文件的程序。这些程序用于递归搜索目录树�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf findutils-4.7.0.tar.xz 
+(lfs chroot) root:/sources# cd findutils-4.7.0
 ```
 
 配置并编译：
@@ -6436,14 +7474,40 @@ Findutils 包含查找文件的程序。这些程序用于递归搜索目录树�
 time { ./configure --prefix=/usr --localstatedir=/var/lib/locate && make; }
 
 # 编译完成后显示内容如下：
+make[4]: Leaving directory '/sources/findutils-4.7.0/gnulib-tests'
+make[3]: Leaving directory '/sources/findutils-4.7.0/gnulib-tests'
+make[2]: Leaving directory '/sources/findutils-4.7.0/gnulib-tests'
+make[2]: Entering directory '/sources/findutils-4.7.0'
+make[2]: Leaving directory '/sources/findutils-4.7.0'
+make[1]: Leaving directory '/sources/findutils-4.7.0'
 
+real    1m13.384s
+user    0m42.437s
+sys     0m19.278s
 ```
 
 要测试结果，请执行：
 
 ```sh
-chown -Rv tester .
-su tester -c "PATH=$PATH make check"
+(lfs chroot) root:/sources/findutils-4.7.0# chown -Rv tester .
+(lfs chroot) root:/sources/findutils-4.7.0# su tester -c "PATH=$PATH make check"
+
+# 测试完成后显示内容：
+============================================================================
+Testsuite summary for GNU findutils 4.7.0
+============================================================================
+# TOTAL: 12
+# PASS:  11
+# SKIP:  1
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/findutils-4.7.0'
+make[2]: Leaving directory '/sources/findutils-4.7.0'
+make[1]: Leaving directory '/sources/findutils-4.7.0'
+  GEN      public-submodule-commit
 ```
 
 安装软件包
@@ -6452,20 +7516,29 @@ su tester -c "PATH=$PATH make check"
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/findutils-4.7.0'
+make[1]: Leaving directory '/sources/findutils-4.7.0'
 
+real    0m2.312s
+user    0m1.428s
+sys     0m0.658s
 ```
 
 LFS-Bootscripts 包中的一些脚本依赖于 find。由于 /usr 在引导的早期阶段可能不可用，因此该程序需要位于根分区上。还需要修改 updatedb 脚本以更正显式路径：
 
 ```sh
-mv -v /usr/bin/find /bin
-sed -i 's|find:=${BINDIR}|find:=/bin|' /usr/bin/updatedb
+(lfs chroot) root:/sources/findutils-4.7.0# mv -v /usr/bin/find /bin
+renamed '/usr/bin/find' -> '/bin/find'
+(lfs chroot) root:/sources/findutils-4.7.0# sed -i 's|find:=${BINDIR}|find:=/bin|' /usr/bin/updatedb
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/findutils-4.7.0# cd ..
+(lfs chroot) root:/sources# rm -rf findutils-4.7.0
 ```
 
 ### 8.57 安装 Groff-1.22.4
@@ -6475,7 +7548,8 @@ Groff 包含用于处理和格式化文本的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf groff-1.22.4.tar.gz 
+(lfs chroot) root:/sources# cd groff-1.22.4
 ```
 
 Groff 期望环境变量 PAGE 包含默认的纸张大小。对于美国用户，PAGE=letter 比较合适。在其他地方，PAGE=A4 可能更合适。虽然在编译期间配置了默认纸张大小，但稍后可以通过将“A4”或“letter”回显到 `/etc/papersize` 文件来覆盖它。
@@ -6487,13 +7561,20 @@ Groff 期望环境变量 PAGE 包含默认的纸张大小。对于美国用户�
 time { PAGE=A4 ./configure --prefix=/usr && make -j1 && make install; }
 
 # 编译完成后显示内容如下：
+make[3]: Leaving directory '/sources/groff-1.22.4'
+make[2]: Leaving directory '/sources/groff-1.22.4'
+make[1]: Leaving directory '/sources/groff-1.22.4'
 
+real    1m34.012s
+user    1m15.502s
+sys     0m14.755s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/groff-1.22.4# cd ..
+(lfs chroot) root:/sources# rm -rf groff-1.22.4
 ```
 
 ### 8.58 安装 GRUB-2.04
@@ -6503,13 +7584,13 @@ GRUB 包含 GRand Unified Bootloader。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf grub-2.04.tar.xz 
+(lfs chroot) root:/sources# cd grub-2.04
 ```
 
 配置编译并安装：
 
 ```sh
-# 请注意这里我将默认纸张大小设置为 A4
 time { ./configure --prefix=/usr   \
             --sbindir=/sbin        \
             --sysconfdir=/etc      \
@@ -6517,7 +7598,13 @@ time { ./configure --prefix=/usr   \
             --disable-werror && make && make install; }
 
 # 编译完成后显示内容如下：
+make[3]: Leaving directory '/sources/grub-2.04/util/bash-completion.d'
+make[2]: Leaving directory '/sources/grub-2.04/util/bash-completion.d'
+make[1]: Leaving directory '/sources/grub-2.04'
 
+real    3m49.738s
+user    2m41.081s
+sys     0m46.802s
 ```
 
 此软件包不附带测试套件。
@@ -6525,7 +7612,8 @@ time { ./configure --prefix=/usr   \
 移动文件
 
 ```sh
-mv -v /etc/bash_completion.d/grub /usr/share/bash-completion/completions
+(lfs chroot) root:/sources/grub-2.04# mv -v /etc/bash_completion.d/grub /usr/share/bash-completion/completions
+renamed '/etc/bash_completion.d/grub' -> '/usr/share/bash-completion/completions/grub'
 ```
 
 使用 GRUB 使您的 LFS 系统可启动将在第 10.4 节“使用 GRUB 设置启动过程”中讨论。
@@ -6533,7 +7621,45 @@ mv -v /etc/bash_completion.d/grub /usr/share/bash-completion/completions
 清理软件包
 
 ```sh
+(lfs chroot) root:/sources/grub-2.04# cd ..
+(lfs chroot) root:/sources# rm -rf grub-2.04
+```
 
+### 8.59 安装 Less-551
+
+Less 包含一个文本文件查看器。
+
+解压软件包
+
+```sh
+(lfs chroot) root:/sources# tar xf less-551.tar.gz 
+(lfs chroot) root:/sources# cd less-551
+```
+
+配置编译并安装：
+
+```sh
+time { ./configure --prefix=/usr --sysconfdir=/etc && make && make install; }
+
+# 安装完成后显示内容如下：
+./mkinstalldirs /usr/bin /usr/share/man/man1
+/usr/bin/install -c less /usr/bin/less
+/usr/bin/install -c lesskey /usr/bin/lesskey
+/usr/bin/install -c lessecho /usr/bin/lessecho
+/usr/bin/install -c -m 644 ./less.nro /usr/share/man/man1/less.1
+/usr/bin/install -c -m 644 ./lesskey.nro /usr/share/man/man1/lesskey.1
+/usr/bin/install -c -m 644 ./lessecho.nro /usr/share/man/man1/lessecho.1
+
+real    0m16.382s
+user    0m11.304s
+sys     0m3.444s
+```
+
+清理软件包
+
+```sh
+(lfs chroot) root:/sources/less-551# cd ..
+(lfs chroot) root:/sources# rm -rf less-551
 ```
 
 ### 8.60 安装 Gzip-1.10
@@ -6543,7 +7669,8 @@ Gzip 包含用于压缩和解压缩文件的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf gzip-1.10.tar.xz 
+(lfs chroot) root:/sources# cd gzip-1.10
 ```
 
 配置编译并检查：
@@ -6552,7 +7679,25 @@ Gzip 包含用于压缩和解压缩文件的程序。
 time { ./configure --prefix=/usr && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for gzip 1.10
+============================================================================
+# TOTAL: 22
+# PASS:  22
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[4]: Leaving directory '/sources/gzip-1.10/tests'
+make[3]: Leaving directory '/sources/gzip-1.10/tests'
+make[2]: Leaving directory '/sources/gzip-1.10/tests'
+make[1]: Leaving directory '/sources/gzip-1.10'
 
+real    0m39.525s
+user    0m23.829s
+sys     0m9.949s
 ```
 
 安装软件包
@@ -6561,18 +7706,32 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+Making install in tests
+make[2]: Entering directory '/sources/gzip-1.10/tests'
+make[3]: Entering directory '/sources/gzip-1.10/tests'
+make[3]: Nothing to be done for 'install-exec-am'.
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/gzip-1.10/tests'
+make[2]: Leaving directory '/sources/gzip-1.10/tests'
+make[1]: Leaving directory '/sources/gzip-1.10'
+
+real    0m0.833s
+user    0m0.543s
+sys     0m0.210s
 ```
 
 移动一个需要在根文件系统上的程序：
 
 ```sh
-mv -v /usr/bin/gzip /bin
+(lfs chroot) root:/sources/gzip-1.10# mv -v /usr/bin/gzip /bin
+renamed '/usr/bin/gzip' -> '/bin/gzip'
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/gzip-1.10# cd ..
+(lfs chroot) root:/sources# rm -rf gzip-1.10
 ```
 
 ### 8.61 安装 IPRoute2-5.8.0
@@ -6582,21 +7741,23 @@ IPRoute2 包含用于基本和高级基于 IPV4 的网络的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf iproute2-5.8.0.tar.xz 
+(lfs chroot) root:/sources# cd iproute2-5.8.0
 ```
 
 该包中包含的 arpd 程序将不会构建，因为它依赖于未安装在 LFS 中的 Berkeley DB。但是，仍会安装 arpd 目录和手册页。通过运行以下命令来防止这种情况。如果需要 arpd 二进制文件，可以在 http://www.linuxfromscratch.org/blfs/view/10.0/server/db.html 的 BLFS Book 中找到编译 Berkeley DB 的说明。
 
 ```sh
 # 执行以下命令
-sed -i /ARPD/d Makefile
-rm -fv man/man8/arpd.8
+(lfs chroot) root:/sources/iproute2-5.8.0# sed -i /ARPD/d Makefile
+(lfs chroot) root:/sources/iproute2-5.8.0# rm -fv man/man8/arpd.8
+removed 'man/man8/arpd.8'
 ```
 
 还需要禁用构建两个需要 http://www.linuxfromscratch.org/blfs/view/10.0/postlfs/iptables.html 的模块。
 
 ```sh
-sed -i 's/.m_ipt.o//' tc/Makefile
+(lfs chroot) root:/sources/iproute2-5.8.0# sed -i 's/.m_ipt.o//' tc/Makefile
 ```
 
 编译并安装软件：
@@ -6605,12 +7766,21 @@ sed -i 's/.m_ipt.o//' tc/Makefile
 time { make && make DOCDIR=/usr/share/doc/iproute2-5.8.0 install; }
 
 # 安装完成后显示内容如下：
+install -m 0755 -d /usr/share/bash-completion/completions
+install -m 0644 bash-completion/tc /usr/share/bash-completion/completions
+install -m 0644 bash-completion/devlink /usr/share/bash-completion/completions
+install -m 0644 include/bpf_elf.h /usr/include/iproute2
+
+real    0m46.123s
+user    0m39.774s
+sys     0m5.489s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/iproute2-5.8.0# cd ..
+(lfs chroot) root:/sources# rm -rf iproute2-5.8.0
 ```
 
 ### 8.62 安装 Kbd-2.3.0
@@ -6620,13 +7790,32 @@ Kbd 包含键表文件、控制台字体和键盘实用程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf kbd-2.3.0.tar.xz 
+(lfs chroot) root:/sources# cd kbd-2.3.0
 ```
 
 退格键和删除键的行为在 Kbd 包中的键映射中不一致。以下补丁修复了 i386 键盘映射的这个问题：
 
 ```sh
-patch -Np1 -i ../kbd-2.3.0-backspace-1.patch
+(lfs chroot) root:/sources/kbd-2.3.0# patch -Np1 -i ../kbd-2.3.0-backspace-1.patch
+patching file data/keymaps/i386/dvorak/dvorak-l.map
+patching file data/keymaps/i386/dvorak/dvorak-r.map
+patching file data/keymaps/i386/fgGIod/tr_f-latin5.map
+patching file data/keymaps/i386/qwerty/lt.l4.map
+patching file data/keymaps/i386/qwerty/lt.map
+patching file data/keymaps/i386/qwerty/no-latin1.map
+patching file data/keymaps/i386/qwerty/ru1.map
+patching file data/keymaps/i386/qwerty/ru2.map
+patching file data/keymaps/i386/qwerty/ru-cp1251.map
+patching file data/keymaps/i386/qwerty/ru-ms.map
+patching file data/keymaps/i386/qwerty/ru_win.map
+patching file data/keymaps/i386/qwerty/se-ir209.map
+patching file data/keymaps/i386/qwerty/se-lat6.map
+patching file data/keymaps/i386/qwerty/tr_q-latin5.map
+patching file data/keymaps/i386/qwerty/ua.map
+patching file data/keymaps/i386/qwerty/ua-utf.map
+patching file data/keymaps/i386/qwerty/ua-utf-ws.map
+patching file data/keymaps/i386/qwerty/ua-ws.map
 ```
 
 打补丁后，退格键生成代码为 127 的字符，删除键生成众所周知的转义序列。
@@ -6634,8 +7823,8 @@ patch -Np1 -i ../kbd-2.3.0-backspace-1.patch
 删除多余的 resizecons 程序（它需要已失效的 svgalib 来提供视频模式文件 - 对于正常使用，请适当设置控制台的 setfont 大小）及其手册页。
 
 ```sh
-sed -i '/RESIZECONS_PROGS=/s/yes/no/' configure
-sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
+(lfs chroot) root:/sources/kbd-2.3.0# sed -i '/RESIZECONS_PROGS=/s/yes/no/' configure
+(lfs chroot) root:/sources/kbd-2.3.0# sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
 ```
 
 配置编译并检查：
@@ -6644,7 +7833,21 @@ sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
 time { ./configure --prefix=/usr --disable-vlock && make && make check; }
 
 # 检查完成后显示内容如下：
+## ------------- ##
+## Test results. ##
+## ------------- ##
 
+36 tests were successful.
+4 tests were skipped.
+make[3]: Leaving directory '/sources/kbd-2.3.0/tests'
+make[2]: Leaving directory '/sources/kbd-2.3.0/tests'
+make[1]: Leaving directory '/sources/kbd-2.3.0/tests'
+make[1]: Entering directory '/sources/kbd-2.3.0'
+make[1]: Leaving directory '/sources/kbd-2.3.0'
+
+real    0m43.283s
+user    0m31.714s
+sys     0m9.863s
 ```
 
 安装软件包
@@ -6653,12 +7856,37 @@ time { ./configure --prefix=/usr --disable-vlock && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/kbd-2.3.0/tests/libtswrap'
+make[2]: Leaving directory '/sources/kbd-2.3.0/tests/libtswrap'
+make[2]: Entering directory '/sources/kbd-2.3.0/tests'
+make[3]: Entering directory '/sources/kbd-2.3.0/tests'
+make[3]: Nothing to be done for 'install-exec-am'.
+make[3]: Nothing to be done for 'install-data-am'.
+make[3]: Leaving directory '/sources/kbd-2.3.0/tests'
+make[2]: Leaving directory '/sources/kbd-2.3.0/tests'
+make[1]: Leaving directory '/sources/kbd-2.3.0/tests'
+make[1]: Entering directory '/sources/kbd-2.3.0'
+make[2]: Entering directory '/sources/kbd-2.3.0'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/kbd-2.3.0'
+make[1]: Leaving directory '/sources/kbd-2.3.0'
+
+real    0m3.029s
+user    0m1.790s
+sys     0m0.833s
 ```
 
 删除无意安装的内部库：
 
 ```sh
-rm -v /usr/lib/libtswrap.{a,la,so*}
+(lfs chroot) root:/sources/kbd-2.3.0# rm -v /usr/lib/libtswrap.{a,la,so*}
+removed '/usr/lib/libtswrap.a'
+removed '/usr/lib/libtswrap.la'
+removed '/usr/lib/libtswrap.so'
+removed '/usr/lib/libtswrap.so.1'
+removed '/usr/lib/libtswrap.so.1.0.0'
 ```
 
 注意：对于某些语言（例如，白俄罗斯语），Kbd 包不提供有用的键映射，其中库存“by”键映射假定 ISO-8859-5 编码，并且通常使用 CP1251 键映射。这些语言的用户必须单独下载工作键盘映射。
@@ -6666,14 +7894,20 @@ rm -v /usr/lib/libtswrap.{a,la,so*}
 如果需要，请安装文档：
 
 ```sh
-mkdir -v /usr/share/doc/kbd-2.3.0
-cp -R -v docs/doc/* /usr/share/doc/kbd-2.3.0
+(lfs chroot) root:/sources/kbd-2.3.0# rm -v /usr/lib/libtswrap.{a,la,so*}
+removed '/usr/lib/libtswrap.a'
+removed '/usr/lib/libtswrap.la'
+removed '/usr/lib/libtswrap.so'
+removed '/usr/lib/libtswrap.so.1'
+removed '/usr/lib/libtswrap.so.1.0.0'
+(lfs chroot) root:/sources/kbd-2.3.0# mkdir -v /usr/share/doc/kbd-2.3.0
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/kbd-2.3.0# cd ..
+(lfs chroot) root:/sources# rm -rf kbd-2.3.0
 ```
 
 ### 8.63 安装 Libpipeline-1.5.3
@@ -6683,7 +7917,8 @@ Libpipeline 包含一个以灵活方便的方式操作子进程管道的库。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf libpipeline-1.5.3.tar.gz 
+(lfs chroot) root:/sources# cd libpipeline-1.5.3
 ```
 
 配置编译并检查：
@@ -6692,7 +7927,26 @@ Libpipeline 包含一个以灵活方便的方式操作子进程管道的库。
 time { ./configure --prefix=/usr && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for libpipeline 1.5.3
+============================================================================
+# TOTAL: 7
+# PASS:  7
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/libpipeline-1.5.3/tests'
+make[2]: Leaving directory '/sources/libpipeline-1.5.3/tests'
+make[1]: Leaving directory '/sources/libpipeline-1.5.3/tests'
+make[1]: Entering directory '/sources/libpipeline-1.5.3'
+make[1]: Leaving directory '/sources/libpipeline-1.5.3'
 
+real    0m45.876s
+user    0m28.035s
+sys     0m11.842s
 ```
 
 安装软件包
@@ -6701,12 +7955,24 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[1]: Leaving directory '/sources/libpipeline-1.5.3/tests'
+make[1]: Entering directory '/sources/libpipeline-1.5.3'
+make[2]: Entering directory '/sources/libpipeline-1.5.3'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/libpipeline-1.5.3'
+make[1]: Leaving directory '/sources/libpipeline-1.5.3'
+
+real    0m0.660s
+user    0m0.375s
+sys     0m0.185s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/libpipeline-1.5.3# cd ..
+(lfs chroot) root:/sources# rm -rf libpipeline-1.5.3
 ```
 
 ### 8.64 安装 Make-4.3
@@ -6716,7 +7982,8 @@ Make 包含一个程序，用于控制从源文件生成包的可执行文件和
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf make-4.3.tar.gz 
+(lfs chroot) root:/sources# cd make-4.3
 ```
 
 配置编译并检查：
@@ -6725,7 +7992,18 @@ Make 包含一个程序，用于控制从源文件生成包的可执行文件和
 time { ./configure --prefix=/usr && make && make check; }
 
 # 检查完成后显示内容如下：
+690 Tests in 125 Categories Complete ... No Failures :-)
 
+======================================================================
+ Regression PASSED: GNU Make 4.3 (x86_64-pc-linux-gnu) built with gcc 
+======================================================================
+
+make[2]: Leaving directory '/sources/make-4.3'
+make[1]: Leaving directory '/sources/make-4.3'
+
+real    1m13.874s
+user    0m21.730s
+sys     0m8.474s
 ```
 
 安装软件包
@@ -6734,12 +8012,19 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[2]: Leaving directory '/sources/make-4.3'
+make[1]: Leaving directory '/sources/make-4.3'
+
+real    0m0.759s
+user    0m0.393s
+sys     0m0.240s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/make-4.3# cd ..
+(lfs chroot) root:/sources# rm -rf make-4.3
 ```
 
 ### 8.65 安装 Patch-2.7.6
@@ -6749,7 +8034,8 @@ Patch 包含一个程序，用于通过应用通常由 diff 程序创建的“�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf patch-2.7.6.tar.xz 
+(lfs chroot) root:/sources# cd patch-2.7.6
 ```
 
 配置编译并检查：
@@ -6758,7 +8044,27 @@ Patch 包含一个程序，用于通过应用通常由 diff 程序创建的“�
 time { ./configure --prefix=/usr && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for GNU patch 2.7.6
+============================================================================
+# TOTAL: 44
+# PASS:  41
+# SKIP:  1
+# XFAIL: 2
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[4]: Leaving directory '/sources/patch-2.7.6/tests'
+make[3]: Leaving directory '/sources/patch-2.7.6/tests'
+make[2]: Leaving directory '/sources/patch-2.7.6/tests'
+make[2]: Entering directory '/sources/patch-2.7.6'
+make[2]: Leaving directory '/sources/patch-2.7.6'
+make[1]: Leaving directory '/sources/patch-2.7.6'
 
+real    1m0.789s
+user    0m36.871s
+sys     0m15.860s
 ```
 
 安装软件包
@@ -6767,12 +8073,20 @@ time { ./configure --prefix=/usr && make && make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[3]: Leaving directory '/sources/patch-2.7.6'
+make[2]: Leaving directory '/sources/patch-2.7.6'
+make[1]: Leaving directory '/sources/patch-2.7.6'
+
+real    0m0.671s
+user    0m0.400s
+sys     0m0.179s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/patch-2.7.6# cd ..
+(lfs chroot) root:/sources# rm -rf patch-2.7.6
 ```
 
 ### 8.66 安装 Man-DB-2.9.3
@@ -6782,7 +8096,8 @@ Man-DB 包含用于查找和查看手册页的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf man-db-2.9.3.tar.xz 
+(lfs chroot) root:/sources# cd man-db-2.9.3
 ```
 
 配置编译并检查：
@@ -6800,7 +8115,39 @@ time { ./configure --prefix=/usr                 \
             --with-systemdsystemunitdir= && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for man-db 2.9.3
+============================================================================
+# TOTAL: 12
+# PASS:  12
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[4]: Leaving directory '/sources/man-db-2.9.3/man'
+make[3]: Leaving directory '/sources/man-db-2.9.3/man'
+make[2]: Leaving directory '/sources/man-db-2.9.3/man'
+make[1]: Leaving directory '/sources/man-db-2.9.3/man'
+Making check in manual
+make[1]: Entering directory '/sources/man-db-2.9.3/manual'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/man-db-2.9.3/manual'
+Making check in po
+make[1]: Entering directory '/sources/man-db-2.9.3/po'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/man-db-2.9.3/po'
+Making check in tools
+make[1]: Entering directory '/sources/man-db-2.9.3/tools'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/man-db-2.9.3/tools'
+make[1]: Entering directory '/sources/man-db-2.9.3'
+make[1]: Leaving directory '/sources/man-db-2.9.3'
 
+real    2m8.851s
+user    1m24.686s
+sys     0m27.355s
 ```
 
 安装软件包
@@ -6809,6 +8156,23 @@ time { ./configure --prefix=/usr                 \
 time { make install; }
 
 # 安装完成后显示内容如下：
+Making install in tools
+make[1]: Entering directory '/sources/man-db-2.9.3/tools'
+make[2]: Entering directory '/sources/man-db-2.9.3/tools'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/man-db-2.9.3/tools'
+make[1]: Leaving directory '/sources/man-db-2.9.3/tools'
+make[1]: Entering directory '/sources/man-db-2.9.3'
+make[2]: Entering directory '/sources/man-db-2.9.3'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/man-db-2.9.3'
+make[1]: Leaving directory '/sources/man-db-2.9.3'
+
+real    0m3.276s
+user    0m2.026s
+sys     0m0.843s
 ```
 
 支持 `Simplified Chinese (zh_CN)` 语言，编码格式为 `GBK`
@@ -6816,7 +8180,8 @@ time { make install; }
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/man-db-2.9.3# cd ..
+(lfs chroot) root:/sources# rm -rf man-db-2.9.3
 ```
 
 ### 8.67 安装 Tar-1.32
@@ -6826,7 +8191,8 @@ Tar 提供了创建 tar 档案以及执行各种其他类型的档案操作的�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf tar-1.32.tar.xz 
+(lfs chroot) root:/sources# cd tar-1.32
 ```
 
 配置编译并检查：
@@ -6837,7 +8203,57 @@ time { FORCE_UNSAFE_CONFIGURE=1  \
             --bindir=/bin && make && make check; }
 
 # 检查完成后显示内容如下：
+## ------------- ##
+## Test results. ##
+## ------------- ##
 
+ERROR: 215 tests were run,
+1 failed unexpectedly.
+19 tests were skipped.
+## -------------------------- ##
+## testsuite.log was created. ##
+## -------------------------- ##
+
+Please send `tests/testsuite.log' and all information you think might help:
+
+   To: <bug-tar@gnu.org>
+   Subject: [GNU tar 1.32] testsuite: 223 failed
+
+You may investigate any problem if you feel able to do so, in which
+case the test suite provides a good starting point.  Its output may
+be found below `tests/testsuite.dir'.
+
+make[2]: *** [Makefile:1838: check-local] Error 1
+make[2]: Leaving directory '/sources/tar-1.32/tests'
+make[1]: *** [Makefile:1690: check-am] Error 2
+make[1]: Leaving directory '/sources/tar-1.32/tests'
+make: *** [Makefile:1410: check-recursive] Error 1
+
+real    7m52.237s
+user    1m35.192s
+sys     3m29.130s
+```
+
+有一项测试 `功能：二进制存储/恢复` (`capabilities: binary store/restore`)，已知会失败，可忽略。
+
+失败的测试项：
+
+```sh
+Extended attributes
+
+211: xattrs: basic functionality                     ok
+212: xattrs: change directory with -C option         ok
+213: xattrs: trusted.* attributes                    ok
+214: xattrs: s/open/openat/ regression               ok
+215: xattrs: keywords with '=' and '%'               ok
+216: xattrs: exclude xattrs on create                ok
+217: xattrs: xattrs and --skip-old-files             ok
+218: acls: basic functionality                       ok
+219: acls: work with -C                              ok
+220: acls: default ACLs                              ok
+221: selinux: basic store/restore                    skipped (selnx01.at:28)
+222: acls/selinux: special files & fifos             skipped (selacl01.at:28)
+223: capabilities: binary store/restore              FAILED (capabs_raw01.at:28)
 ```
 
 安装软件包
@@ -6846,12 +8262,36 @@ time { FORCE_UNSAFE_CONFIGURE=1  \
 time { make install && make -C doc install-html docdir=/usr/share/doc/tar-1.32; }
 
 # 安装完成后显示内容如下：
+Making install in tests
+make[1]: Entering directory '/sources/tar-1.32/tests'
+make[2]: Entering directory '/sources/tar-1.32/tests'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/tar-1.32/tests'
+make[1]: Leaving directory '/sources/tar-1.32/tests'
+make[1]: Entering directory '/sources/tar-1.32'
+make[2]: Entering directory '/sources/tar-1.32'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/tar-1.32'
+make[1]: Leaving directory '/sources/tar-1.32'
+make: Entering directory '/sources/tar-1.32/doc'
+  MAKEINFO tar.html
+ /bin/mkdir -p '/usr/share/doc/tar-1.32'
+ /bin/mkdir -p '/usr/share/doc/tar-1.32/tar.html'
+ /usr/bin/install -c -m 644 'tar.html'/* '/usr/share/doc/tar-1.32/tar.html'
+make: Leaving directory '/sources/tar-1.32/doc'
+
+real    0m6.724s
+user    0m5.790s
+sys     0m0.619s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/tar-1.32# cd ..
+(lfs chroot) root:/sources# rm -rf tar-1.32
 ```
 
 ### 8.68 安装 Texinfo-6.7
@@ -6861,7 +8301,8 @@ Texinfo 包含用于读取、写入和转换信息页面的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf texinfo-6.7.tar.xz 
+(lfs chroot) root:/sources# cd texinfo-6.7
 ```
 
 配置编译并检查：
@@ -6870,7 +8311,43 @@ Texinfo 包含用于读取、写入和转换信息页面的程序。
 time { ./configure --prefix=/usr --disable-static && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for GNU Texinfo 6.7
+============================================================================
+# TOTAL: 1
+# PASS:  1
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/texinfo-6.7/util'
+make[2]: Leaving directory '/sources/texinfo-6.7/util'
+make[1]: Leaving directory '/sources/texinfo-6.7/util'
+Making check in doc
+make[1]: Entering directory '/sources/texinfo-6.7/doc'
+Making check in tp_api
+make[2]: Entering directory '/sources/texinfo-6.7/doc/tp_api'
+make  check-am
+make[3]: Entering directory '/sources/texinfo-6.7/doc/tp_api'
+make[3]: Nothing to be done for 'check-am'.
+make[3]: Leaving directory '/sources/texinfo-6.7/doc/tp_api'
+make[2]: Leaving directory '/sources/texinfo-6.7/doc/tp_api'
+make[2]: Entering directory '/sources/texinfo-6.7/doc'
+make[2]: Nothing to be done for 'check-am'.
+make[2]: Leaving directory '/sources/texinfo-6.7/doc'
+make[1]: Leaving directory '/sources/texinfo-6.7/doc'
+Making check in man
+make[1]: Entering directory '/sources/texinfo-6.7/man'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/texinfo-6.7/man'
+make[1]: Entering directory '/sources/texinfo-6.7'
+make[1]: Leaving directory '/sources/texinfo-6.7'
 
+real    2m54.785s
+user    2m17.273s
+sys     0m30.475s
 ```
 
 安装软件包，同时安装属于 TeX 的组件
@@ -6879,11 +8356,17 @@ time { ./configure --prefix=/usr --disable-static && make && make check; }
 time { make install && make TEXMF=/usr/share/texmf install-tex; }
 
 # 安装完成后显示内容如下：
+make[1]: Leaving directory '/sources/texinfo-6.7/doc'
+
+real    0m2.606s
+user    0m1.524s
+sys     0m0.756s
 ```
 
 信息文档系统使用纯文本文件来保存其菜单条目列表。该文件位于 `/usr/share/info/dir`。不幸的是，由于各种软件包的 Makefile 中偶尔出现问题，它有时会与系统上安装的信息页面不同步。如果需要重新创建 `/usr/share/info/dir` 文件，以下可选命令将完成任务：
 
 ```sh
+# 执行以下脚本
 pushd /usr/share/info
   rm -v dir
   for f in *
@@ -6895,7 +8378,8 @@ popd
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/texinfo-6.7# cd ..
+(lfs chroot) root:/sources# rm -rf texinfo-6.7
 ```
 
 ### 8.69 安装 Vim-8.2.1361
@@ -6907,13 +8391,14 @@ Vim 包含一个强大的文本编辑器。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf vim-8.2.1361.tar.gz 
+(lfs chroot) root:/sources# cd vim-8.2.1361
 ```
 
 首先将 vimrc 配置文件的默认位置更改为 /etc：
 
 ```sh
-echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
+(lfs chroot) root:/sources/vim-8.2.1361# echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
 ```
 
 配置并编译：
@@ -6921,23 +8406,45 @@ echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
 ```sh
 time { ./configure --prefix=/usr && make; }
 
-# 检查完成后显示内容如下：
+# 编译完成后显示内容如下：
+make[2]: Leaving directory '/sources/vim-8.2.1361/src/po'
+make[2]: Entering directory '/sources/vim-8.2.1361/src/po'
+make[2]: Nothing to be done for 'converted'.
+make[2]: Leaving directory '/sources/vim-8.2.1361/src/po'
+make[1]: Leaving directory '/sources/vim-8.2.1361/src'
 
+real    2m41.459s
+user    2m23.761s
+sys     0m13.181s
 ```
 
 要准备测试，请确保用户 tester 可以写入源代码树：
 
 ```sh
-chown -Rv tester .
+(lfs chroot) root:/sources/vim-8.2.1361# chown -Rv tester .
 ```
 
 现在以用户 tester 身份运行测试：
 
 ```sh
-su tester -c "LANG=en_US.UTF-8 make -j1 test" &> vim-test.log
+(lfs chroot) root:/sources/vim-8.2.1361# su tester -c "LANG=en_US.UTF-8 make -j1 test" &> vim-test.log
 ```
 
 测试套件向屏幕输出大量二进制数据。这可能会导致当前终端的设置出现问题。可以通过将输出重定向到日志文件来避免该问题，如上所示。成功的测试将在完成时在日志文件中显示 `ALL DONE` 字样。
+
+输入 `cat vim-test.log ` 可以看到日志文件中的信息：
+
+```sh
+-------------------------------
+Executed:  3139 Tests
+ Skipped:    54 Tests
+  Failed:     0 Tests
+
+ALL DONE
+make[2]: Leaving directory '/sources/vim-8.2.1361/src/testdir'
+make[1]: Leaving directory '/sources/vim-8.2.1361/src'
+make[1]: Entering directory '/sources/vim-8.2.1361'
+```
 
 安装软件包
 
@@ -6945,27 +8452,59 @@ su tester -c "LANG=en_US.UTF-8 make -j1 test" &> vim-test.log
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[1]: Leaving directory '/sources/vim-8.2.1361/src'
+
+real    0m4.187s
+user    0m1.746s
+sys     0m1.528s
 ```
 
 许多用户习惯于使用 vi 而不是 vim。要在用户习惯性地输入 vi 时允许执行 vim，请使用提供的语言为二进制文件和手册页创建一个符号链接：
 
 ```sh
-ln -sv vim /usr/bin/vi
+(lfs chroot) root:/sources/vim-8.2.1361# ln -sv vim /usr/bin/vi
+'/usr/bin/vi' -> 'vim'
+# 继续执行以下脚本
 for L in  /usr/share/man/{,*/}man1/vim.1; do
     ln -sv vim.1 $(dirname $L)/vi.1
 done
+# 输出以下内容：
+'/usr/share/man/man1/vi.1' -> 'vim.1'
+'/usr/share/man/da.ISO8859-1/man1/vi.1' -> 'vim.1'
+'/usr/share/man/da.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/da/man1/vi.1' -> 'vim.1'
+'/usr/share/man/de.ISO8859-1/man1/vi.1' -> 'vim.1'
+'/usr/share/man/de.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/de/man1/vi.1' -> 'vim.1'
+'/usr/share/man/fr.ISO8859-1/man1/vi.1' -> 'vim.1'
+'/usr/share/man/fr.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/fr/man1/vi.1' -> 'vim.1'
+'/usr/share/man/it.ISO8859-1/man1/vi.1' -> 'vim.1'
+'/usr/share/man/it.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/it/man1/vi.1' -> 'vim.1'
+'/usr/share/man/ja/man1/vi.1' -> 'vim.1'
+'/usr/share/man/pl.ISO8859-2/man1/vi.1' -> 'vim.1'
+'/usr/share/man/pl.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/pl/man1/vi.1' -> 'vim.1'
+'/usr/share/man/ru.KOI8-R/man1/vi.1' -> 'vim.1'
+'/usr/share/man/ru.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/tr.ISO8859-9/man1/vi.1' -> 'vim.1'
+'/usr/share/man/tr.UTF-8/man1/vi.1' -> 'vim.1'
+'/usr/share/man/tr/man1/vi.1' -> 'vim.1'
 ```
 
 默认情况下，vim 的文档安装在 `/usr/share/vim` 中。以下符号链接允许通过 `/usr/share/doc/vim-8.2.1361` 访问文档，使其与其他包的文档位置保持一致：
 
 ```sh
-ln -sv ../vim/vim82/doc /usr/share/doc/vim-8.2.1361
+(lfs chroot) root:/sources/vim-8.2.1361# ln -sv ../vim/vim82/doc /usr/share/doc/vim-8.2.1361
+'/usr/share/doc/vim-8.2.1361' -> '../vim/vim82/doc'
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/vim-8.2.1361# cd ..
+(lfs chroot) root:/sources# rm -rf vim-8.2.1361
 ```
 
 #### 8.69.2 配置 Vim
@@ -7001,6 +8540,8 @@ EOF
 vim -c ':options'
 ```
 
+输入 `:q!` 可退出 Vim 界面
+
 注意：默认情况下，vim 只安装英语的拼写文件。要为您的首选语言安装拼写文件，请从 ftp://ftp.vim.org/pub/vim/runtime/spell/ 下载 *.spl 和可选的 *.sug 文件，并保存它们到 /usr/share/vim/vim82/spell/。
 
 要使用这些拼写文件，需要在 /etc/vimrc 中进行一些配置，例如：
@@ -7022,7 +8563,8 @@ Eudev 包含用于动态创建设备节点的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf eudev-3.2.9.tar.gz 
+(lfs chroot) root:/sources# cd eudev-3.2.9
 ```
 
 配置并编译：
@@ -7040,14 +8582,28 @@ time { ./configure --prefix=/usr    \
             --disable-static && make; }
 
 # 编译完成后显示内容如下：
+Making all in hwdb
+make[2]: Entering directory '/sources/eudev-3.2.9/hwdb'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/sources/eudev-3.2.9/hwdb'
+make[2]: Entering directory '/sources/eudev-3.2.9'
+make[2]: Leaving directory '/sources/eudev-3.2.9'
+make[1]: Leaving directory '/sources/eudev-3.2.9'
 
+real    0m42.277s
+user    0m32.095s
+sys     0m7.938s
 ```
 
 现在创建一些测试所需的目录，但也将用作安装的一部分：
 
 ```sh
-mkdir -pv /lib/udev/rules.d
-mkdir -pv /etc/udev/rules.d
+(lfs chroot) root:/sources/eudev-3.2.9# mkdir -pv /lib/udev/rules.d
+mkdir: created directory '/lib/udev'
+mkdir: created directory '/lib/udev/rules.d'
+(lfs chroot) root:/sources/eudev-3.2.9# mkdir -pv /etc/udev/rules.d
+mkdir: created directory '/etc/udev'
+mkdir: created directory '/etc/udev/rules.d'
 ```
 
 若要测试结果，请执行：
@@ -7056,6 +8612,34 @@ mkdir -pv /etc/udev/rules.d
 time { make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for eudev 3.2.9
+============================================================================
+# TOTAL: 2
+# PASS:  2
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[3]: Leaving directory '/sources/eudev-3.2.9/test'
+make[2]: Leaving directory '/sources/eudev-3.2.9/test'
+make[1]: Leaving directory '/sources/eudev-3.2.9/test'
+Making check in man
+make[1]: Entering directory '/sources/eudev-3.2.9/man'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/eudev-3.2.9/man'
+Making check in hwdb
+make[1]: Entering directory '/sources/eudev-3.2.9/hwdb'
+make[1]: Nothing to be done for 'check'.
+make[1]: Leaving directory '/sources/eudev-3.2.9/hwdb'
+make[1]: Entering directory '/sources/eudev-3.2.9'
+make[1]: Leaving directory '/sources/eudev-3.2.9'
+
+real    0m2.457s
+user    0m0.955s
+sys     0m1.402s
 ```
 
 安装软件包：
@@ -7064,13 +8648,60 @@ time { make check; }
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[2]: Leaving directory '/sources/eudev-3.2.9/hwdb'
+make[1]: Leaving directory '/sources/eudev-3.2.9/hwdb'
+make[1]: Entering directory '/sources/eudev-3.2.9'
+make[2]: Entering directory '/sources/eudev-3.2.9'
+make[2]: Nothing to be done for 'install-exec-am'.
+make[2]: Nothing to be done for 'install-data-am'.
+make[2]: Leaving directory '/sources/eudev-3.2.9'
+make[1]: Leaving directory '/sources/eudev-3.2.9'
+
+real    0m2.028s
+user    0m1.378s
+sys     0m0.401s
 ```
 
 安装一些在 LFS 环境中有用的自定义规则和支持文件：
 
 ```sh
-tar -xvf ../udev-lfs-20171102.tar.xz
-make -f udev-lfs-20171102/Makefile.lfs install
+(lfs chroot) root:/sources/eudev-3.2.9# tar -xvf ../udev-lfs-20171102.tar.xz
+udev-lfs-20171102/
+udev-lfs-20171102/init-net-rules.sh
+udev-lfs-20171102/83-cdrom-symlinks.rules
+udev-lfs-20171102/write_cd_rules
+udev-lfs-20171102/ChangeLog
+udev-lfs-20171102/81-cdrom.rules
+udev-lfs-20171102/55-lfs.txt
+udev-lfs-20171102/write_net_rules
+udev-lfs-20171102/README
+udev-lfs-20171102/contrib/
+udev-lfs-20171102/contrib/debian/
+udev-lfs-20171102/contrib/debian/83-cdrom-symlinks.rules
+udev-lfs-20171102/contrib/debian/81-cdrom.rules
+udev-lfs-20171102/contrib/debian/write_cd_aliases
+udev-lfs-20171102/rule_generator.functions
+udev-lfs-20171102/55-lfs.rules
+udev-lfs-20171102/Makefile.lfs
+(lfs chroot) root:/sources/eudev-3.2.9# make -f udev-lfs-20171102/Makefile.lfs install
+mkdir: created directory '/usr/share/doc/udev-20171102'
+mkdir: created directory '/usr/share/doc/udev-20171102/lfs'
+'udev-lfs-20171102/55-lfs.rules' -> '/etc/udev/rules.d/55-lfs.rules'
+'udev-lfs-20171102/81-cdrom.rules' -> '/etc/udev/rules.d/81-cdrom.rules'
+'udev-lfs-20171102/83-cdrom-symlinks.rules' -> '/etc/udev/rules.d/83-cdrom-symlinks.rules'
+'udev-lfs-20171102/write_cd_rules' -> '/lib/udev/write_cd_rules'
+'udev-lfs-20171102/write_net_rules' -> '/lib/udev/write_net_rules'
+'udev-lfs-20171102/init-net-rules.sh' -> '/lib/udev/init-net-rules.sh'
+'udev-lfs-20171102/rule_generator.functions' -> '/lib/udev/rule_generator.functions'
+'udev-lfs-20171102/README' -> '/usr/share/doc/udev-20171102/lfs/README'
+'udev-lfs-20171102/55-lfs.txt' -> '/usr/share/doc/udev-20171102/lfs/55-lfs.txt'
+```
+
+清理安装包
+
+```sh
+(lfs chroot) root:/sources/eudev-3.2.9# cd ..
+(lfs chroot) root:/sources# rm -rf eudev-3.2.9
 ```
 
 #### 8.70.2 配置 Eudev
@@ -7078,16 +8709,10 @@ make -f udev-lfs-20171102/Makefile.lfs install
 有关硬件设备的信息保存在 `/etc/udev/hwdb.d` 和 `/lib/udev/hwdb.d` 目录中。 Eudev 需要将该信息编译到二进制数据库 `/etc/udev/hwdb.bin` 中。创建初始数据库：
 
 ```sh
-udevadm hwdb --update
+(lfs chroot) root:/sources# udevadm hwdb --update
 ```
 
 每次更新硬件信息时都需要运行此命令。
-
-清理安装包
-
-```sh
-
-```
 
 ### 8.71 安装 Procps-ng-3.3.16
 
@@ -7096,7 +8721,8 @@ Procps-ng 包含用于监控进程的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf procps-ng-3.3.16.tar.xz 
+(lfs chroot) root:/sources# cd procps-ng-3.3.16
 ```
 
 配置编译并检查：
@@ -7110,7 +8736,25 @@ time { ./configure --prefix=/usr                     \
             --disable-kill && make && make check; }
 
 # 检查完成后显示内容如下：
+============================================================================
+Testsuite summary for procps-ng 3.3.16
+============================================================================
+# TOTAL: 1
+# PASS:  1
+# SKIP:  0
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+make[4]: Leaving directory '/sources/procps-ng-3.3.16'
+make[3]: Leaving directory '/sources/procps-ng-3.3.16'
+make[2]: Leaving directory '/sources/procps-ng-3.3.16'
+make[1]: Leaving directory '/sources/procps-ng-3.3.16'
 
+real    0m46.880s
+user    0m24.363s
+sys     0m7.086s
 ```
 
 安装软件包
@@ -7119,19 +8763,30 @@ time { ./configure --prefix=/usr                     \
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[3]: Leaving directory '/sources/procps-ng-3.3.16'
+make[2]: Leaving directory '/sources/procps-ng-3.3.16'
+make[1]: Leaving directory '/sources/procps-ng-3.3.16'
+
+real    0m1.642s
+user    0m1.001s
+sys     0m0.525s
 ```
 
 最后，将必要的库移动到一个可以在 /usr 未安装的情况下找到的位置。
 
 ```sh
-mv -v /usr/lib/libprocps.so.* /lib
-ln -sfv ../../lib/$(readlink /usr/lib/libprocps.so) /usr/lib/libprocps.so
+(lfs chroot) root:/sources/procps-ng-3.3.16# mv -v /usr/lib/libprocps.so.* /lib
+renamed '/usr/lib/libprocps.so.8' -> '/lib/libprocps.so.8'
+renamed '/usr/lib/libprocps.so.8.0.2' -> '/lib/libprocps.so.8.0.2'
+(lfs chroot) root:/sources/procps-ng-3.3.16# ln -sfv ../../lib/$(readlink /usr/lib/libprocps.so) /usr/lib/libprocps.so
+'/usr/lib/libprocps.so' -> '../../lib/libprocps.so.8.0.2'
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/procps-ng-3.3.16# cd ..
+(lfs chroot) root:/sources# rm -rf procps-ng-3.3.16
 ```
 
 ### 8.72 安装 Util-linux-2.36
@@ -7141,13 +8796,14 @@ Util-linux 包含各种实用程序。其中包括用于处理文件系统、控
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf util-linux-2.36.tar.xz 
+(lfs chroot) root:/sources# cd util-linux-2.36
 ```
 
-FHS 建议使用 /var/lib/hwclock 目录而不是通常的 /etc 目录作为 adjtime 文件的位置。使用以下命令创建此目录：
+FHS 建议使用 `/var/lib/hwclock` 目录而不是通常的 `/etc` 目录作为 `adjtime` 文件的位置。使用以下命令创建此目录：
 
 ```sh
-mkdir -pv /var/lib/hwclock
+(lfs chroot) root:/sources/util-linux-2.36# mkdir -pv /var/lib/hwclock
 ```
 
 配置并编译，`--disable` 和 `--without` 选项可防止有关构建需要不在 LFS 中的包或与其他包安装的程序不一致的组件的警告：
@@ -7168,16 +8824,29 @@ time { ./configure ADJTIME_PATH=/var/lib/hwclock/adjtime   \
             --without-systemdsystemunitdir && make; }
 
 # 编译完成后显示内容如下：
+make[2]: Leaving directory '/sources/util-linux-2.36'
+make[1]: Leaving directory '/sources/util-linux-2.36'
 
+real    3m20.357s
+user    2m39.671s
+sys     0m34.409s
 ```
 
-警告：以 root 用户身份运行测试套件可能对您的系统有害。要运行它，内核的 CONFIG_SCSI_DEBUG 选项必须在当前运行的系统中可用，并且必须构建为模块。将其构建到内核中将阻止启动。为了完全覆盖，必须安装其他 BLFS 包。如果需要，可以在重新启动到完整的 LFS 系统并运行后运行此测试：`bash tests/run.sh --srcdir=$PWD --builddir=$PWD` (我不运行此命令)
+警告：以 root 用户身份运行测试套件可能对您的系统有害。要运行它，内核的 `CONFIG_SCSI_DEBUG` 选项必须在当前运行的系统中可用，并且必须构建为模块。将其构建到内核中将阻止启动。为了完全覆盖，必须安装其他 BLFS 包。如果需要，可以在重新启动到完整的 LFS 系统并运行后运行此测试：`bash tests/run.sh --srcdir=$PWD --builddir=$PWD` (我不运行此命令)
 
 如果需要，以非 root 用户身份运行测试套件：
 
 ```sh
-chown -Rv tester .
-su tester -c "make -k check"
+(lfs chroot) root:/sources/util-linux-2.36# chown -Rv tester .
+(lfs chroot) root:/sources/util-linux-2.36# su tester -c "make -k check"
+
+# 测试套件的输出信息：
+---------------------------------------------------------------------
+  All 207 tests PASSED
+---------------------------------------------------------------------
+make[3]: Leaving directory '/sources/util-linux-2.36'
+make[2]: Leaving directory '/sources/util-linux-2.36'
+make[1]: Leaving directory '/sources/util-linux-2.36'
 ```
 
 安装软件包
@@ -7186,12 +8855,24 @@ su tester -c "make -k check"
 time { make install; }
 
 # 安装完成后显示内容如下：
+make  install-data-hook
+make[4]: Entering directory '/sources/util-linux-2.36'
+make[4]: Nothing to be done for 'install-data-hook'.
+make[4]: Leaving directory '/sources/util-linux-2.36'
+make[3]: Leaving directory '/sources/util-linux-2.36'
+make[2]: Leaving directory '/sources/util-linux-2.36'
+make[1]: Leaving directory '/sources/util-linux-2.36'
+
+real    0m7.987s
+user    0m5.014s
+sys     0m2.237s
 ```
 
 清理软件包
 
 ```sh
-
+(lfs chroot) root:/sources/util-linux-2.36# cd ..
+(lfs chroot) root:/sources# rm -rf util-linux-2.36
 ```
 
 ### 8.73 安装 E2fsprogs-1.45.6
@@ -7201,14 +8882,16 @@ E2fsprogs 包含用于处理 ext2 文件系统的实用程序。它还支持 ext
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf e2fsprogs-1.45.6.tar.gz 
+(lfs chroot) root:/sources# cd e2fsprogs-1.45.6
 ```
 
 E2fsprogs 文档建议将包构建在源代码树的子目录中：
 
 ```sh
-mkdir -v build
-cd build
+(lfs chroot) root:/sources/e2fsprogs-1.45.6# mkdir -v build
+mkdir: created directory 'build'
+(lfs chroot) root:/sources/e2fsprogs-1.45.6# cd build
 ```
 
 配置编译并检查：
@@ -7224,7 +8907,13 @@ time { ../configure --prefix=/usr    \
              --disable-fsck && make && make check; }
 
 # 检查完成后显示内容如下：
+357 tests succeeded     0 tests failed
+Creating test_script...
+make[1]: Leaving directory '/sources/e2fsprogs-1.45.6/build/tests'
 
+real    4m34.993s
+user    2m43.897s
+sys     0m39.063s
 ```
 
 在机械硬盘上，测试需要 4 个多一点的 SBU。它们在 SSD 上可以更短（低至约 1.5 个 SBU）。
@@ -7235,33 +8924,46 @@ time { ../configure --prefix=/usr    \
 time { make install; }
 
 # 安装完成后显示内容如下：
+make[2]: Leaving directory '/sources/e2fsprogs-1.45.6/build/intl'
+make[1]: Leaving directory '/sources/e2fsprogs-1.45.6/build'
+
+real    0m3.192s
+user    0m1.583s
+sys     0m1.009s
 ```
 
 使已安装的静态库可写，以便以后可以删除调试符号：
 
 ```sh
-chmod -v u+w /usr/lib/{libcom_err,libe2p,libext2fs,libss}.a
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# chmod -v u+w /usr/lib/{libcom_err,libe2p,libext2fs,libss}.a
+mode of '/usr/lib/libcom_err.a' changed from 0444 (r--r--r--) to 0644 (rw-r--r--)
+mode of '/usr/lib/libe2p.a' changed from 0444 (r--r--r--) to 0644 (rw-r--r--)
+mode of '/usr/lib/libext2fs.a' changed from 0444 (r--r--r--) to 0644 (rw-r--r--)
+mode of '/usr/lib/libss.a' changed from 0444 (r--r--r--) to 0644 (rw-r--r--)
 ```
 
 这个包安装了一个 gzip 压缩的 .info 文件，但不更新系统范围的 dir 文件。解压缩此文件，然后使用以下命令更新系统目录文件：
 
 ```sh
-gunzip -v /usr/share/info/libext2fs.info.gz
-install-info --dir-file=/usr/share/info/dir /usr/share/info/libext2fs.info
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# gunzip -v /usr/share/info/libext2fs.info.gz
+/usr/share/info/libext2fs.info.gz:       79.7% -- replaced with /usr/share/info/libext2fs.info
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# install-info --dir-file=/usr/share/info/dir /usr/share/info/libext2fs.info
 ```
 
 如果需要，通过执行以下命令来创建和安装一些附加文档：
 
 ```sh
-makeinfo -o      doc/com_err.info ../lib/et/com_err.texinfo
-install -v -m644 doc/com_err.info /usr/share/info
-install-info --dir-file=/usr/share/info/dir /usr/share/info/com_err.info
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# makeinfo -o doc/com_err.info ../lib/et/com_err.texinfo
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# install -v -m644 doc/com_err.info /usr/share/info
+'doc/com_err.info' -> '/usr/share/info/com_err.info'
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# install-info --dir-file=/usr/share/info/dir /usr/share/info/com_err.info
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/e2fsprogs-1.45.6/build# cd ../..
+(lfs chroot) root:/sources# rm -rf e2fsprogs-1.45.6
 ```
 
 ### 8.74 安装 Sysklogd-1.5.1
@@ -7273,14 +8975,15 @@ Sysklogd 包含记录系统消息的程序，例如发生异常情况时内核�
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf sysklogd-1.5.1.tar.gz 
+(lfs chroot) root:/sources# cd sysklogd-1.5.1
 ```
 
 首先修复在 klogd 中某些条件下导致分段错误的问题，并修复一个过时的程序结构：
 
 ```sh
-sed -i '/Error loading kernel symbols/{n;n;d}' ksym_mod.c
-sed -i 's/union wait/int/' syslogd.c
+(lfs chroot) root:/sources/sysklogd-1.5.1# sed -i '/Error loading kernel symbols/{n;n;d}' ksym_mod.c
+(lfs chroot) root:/sources/sysklogd-1.5.1# sed -i 's/union wait/int/' syslogd.c
 ```
 
 编译并安装软件包
@@ -7289,7 +8992,16 @@ sed -i 's/union wait/int/' syslogd.c
 time { make && make BINDIR=/sbin install; }
 
 # 安装完成后输出以下信息:
+/usr/bin/install -o root -g root -m 644 sysklogd.8 /usr/share/man/man8/sysklogd.8
+/usr/bin/install -o root -g root -m 644 syslogd.8 /usr/share/man/man8/syslogd.8
+/usr/bin/install -o root -g root -m 644 syslog.conf.5 /usr/share/man/man5/syslog.conf.5
+/usr/bin/install -o root -g root -m 644 klogd.8 /usr/share/man/man8/klogd.8
+/usr/bin/install -m 500 -s syslogd /sbin/syslogd
+/usr/bin/install -m 500 -s klogd /sbin/klogd
 
+real    0m1.933s
+user    0m1.644s
+sys     0m0.209s
 ```
 
 #### 8.74.2 配置 Sysklogd
@@ -7297,6 +9009,7 @@ time { make && make BINDIR=/sbin install; }
 通过运行以下命令创建一个新的 `/etc/syslog.conf` 文件：
 
 ```sh
+# 执行以下命令：
 cat > /etc/syslog.conf << "EOF"
 # Begin /etc/syslog.conf
 
@@ -7315,7 +9028,8 @@ EOF
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/sysklogd-1.5.1# cd ..
+(lfs chroot) root:/sources# rm -rf sysklogd-1.5.1
 ```
 
 ### 8.75 安装 Sysvinit-2.97
@@ -7325,13 +9039,17 @@ Sysvinit 包含用于控制系统启动、运行和关闭的程序。
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/sources# tar xf sysvinit-2.97.tar.xz 
+(lfs chroot) root:/sources# cd sysvinit-2.97
 ```
 
 首先应用一个补丁来删除其他包安装的几个程序，澄清一条消息，并修复一个编译器警告：
 
 ```sh
-patch -Np1 -i ../sysvinit-2.97-consolidated-1.patch
+(lfs chroot) root:/sources/sysvinit-2.97# patch -Np1 -i ../sysvinit-2.97-consolidated-1.patch
+patching file src/Makefile
+Hunk #2 succeeded at 211 (offset 2 lines).
+Hunk #3 succeeded at 236 (offset 2 lines).
 ```
 
 编译并安装软件包
@@ -7340,13 +9058,18 @@ patch -Np1 -i ../sysvinit-2.97-consolidated-1.patch
 time { make && make install; }
 
 # 安装完成后输出以下信息:
+make[1]: Leaving directory '/sources/sysvinit-2.97/src'
 
+real    0m3.634s
+user    0m2.978s
+sys     0m0.478s
 ```
 
 清除软件包
 
 ```sh
-
+(lfs chroot) root:/sources/sysvinit-2.97# cd ..
+(lfs chroot) root:/sources# rm -rf sysvinit-2.97
 ```
 
 ### 8.76 关于调试符号
@@ -7375,6 +9098,8 @@ time { make && make install; }
 ‼️ **强烈建议在进行下面的步骤前，先使用 *快照* 备份你的虚拟机！**
 
 ```sh
+# 备份完成后，依次执行以下命令：
+
 save_lib="ld-2.32.so libc-2.32.so libpthread-2.32.so libthread_db-1.0.so"
 
 cd /lib
@@ -7383,7 +9108,7 @@ for LIB in $save_lib; do
     objcopy --only-keep-debug $LIB $LIB.dbg 
     strip --strip-unneeded $LIB
     objcopy --add-gnu-debuglink=$LIB.dbg $LIB 
-done    
+done
 
 save_usrlib="libquadmath.so.0.0.0 libstdc++.so.6.0.28
              libitm.so.1.0.0 libatomic.so.1.2.0" 
@@ -7414,18 +9139,207 @@ find /{bin,sbin} /usr/{bin,sbin,libexec} -type f \
 
 大量文件将被报告为**无法识别其文件格式**。这些警告可以安全地**忽略**。这些警告表明这些文件是脚本而不是二进制文件。
 
+```sh
+# 以下是我运行上述命令时的输出信息： (以下不要重复运行)
+(lfs chroot) root:/usr/lib# find /usr/lib -type f -name \*.a \
+>    -exec strip --strip-debug {} ';'
+strip: /usr/lib/libm.a: file format not recognized
+(lfs chroot) root:/usr/lib# find /lib /usr/lib -type f -name \*.so* ! -name \*dbg \
+>    -exec strip --strip-unneeded {} ';'
+strip: /usr/lib/libcursesw.so: file format not recognized
+strip: /usr/lib/libc.so: file format not recognized
+strip: /usr/lib/libncurses.so: file format not recognized
+strip: /usr/lib/libform.so: file format not recognized
+strip: /usr/lib/libm.so: file format not recognized
+strip: /usr/lib/libgcc_s.so: file format not recognized
+strip: /usr/lib/libpanel.so: file format not recognized
+strip: /usr/lib/libmenu.so: file format not recognized
+(lfs chroot) root:/usr/lib# find /{bin,sbin} /usr/{bin,sbin,libexec} -type f \
+>     -exec strip --strip-all {} ';'
+strip: /bin/egrep: file format not recognized
+strip: /bin/compile_et: file format not recognized
+strip: /bin/mk_cmds: file format not recognized
+strip: /bin/fgrep: file format not recognized
+strip: /sbin/routel: file format not recognized
+strip: /sbin/e2scrub: file format not recognized
+strip: /sbin/e2scrub_all: file format not recognized
+strip: /sbin/ifcfg: file format not recognized
+strip: /sbin/rtpr: file format not recognized
+strip: /sbin/grub-set-default: file format not recognized
+strip: /sbin/routef: file format not recognized
+strip: /sbin/grub-reboot: file format not recognized
+strip: /sbin/grub-mkconfig: file format not recognized
+strip: /usr/bin/glilypond: file format not recognized
+strip: /usr/bin/znew: file format not recognized
+strip: /usr/bin/decryptdir: file format not recognized
+strip: /usr/bin/multixterm: file format not recognized
+strip: /usr/bin/pod2text: file format not recognized
+strip: /usr/bin/prove: file format not recognized
+strip: /usr/bin/automake: file format not recognized
+strip: /usr/bin/bashbug: file format not recognized
+strip: /usr/bin/gdiffmk: file format not recognized
+strip: /usr/bin/xtrace: file format not recognized
+strip: /usr/bin/autoconf: file format not recognized
+strip: /usr/bin/autoexpect: file format not recognized
+strip: /usr/bin/xpstat: file format not recognized
+strip: /usr/bin/gpinyin: file format not recognized
+strip: /usr/bin/pl2pm: file format not recognized
+strip: /usr/bin/texi2any: file format not recognized
+strip: /usr/bin/intltool-prepare: file format not recognized
+strip: /usr/bin/updatedb: file format not recognized
+strip: /usr/bin/enc2xs: file format not recognized
+strip: /usr/bin/xzless: file format not recognized
+strip: /usr/bin/zmore: file format not recognized
+strip: /usr/bin/piconv: file format not recognized
+strip: /usr/bin/encguess: file format not recognized
+strip: /usr/bin/zforce: file format not recognized
+strip: /usr/bin/roff2dvi: file format not recognized
+strip: /usr/bin/gunzip: file format not recognized
+strip: /usr/bin/xsubpp: file format not recognized
+strip: /usr/bin/zcmp: file format not recognized
+strip: /usr/bin/pic2graph: file format not recognized
+strip: /usr/bin/rftp: file format not recognized
+strip: /usr/bin/aclocal: file format not recognized
+strip: /usr/bin/zdiff: file format not recognized
+strip: /usr/bin/timed-read: file format not recognized
+strip: /usr/bin/unicode_start: file format not recognized
+strip: /usr/bin/bzgrep: file format not recognized
+strip: /usr/bin/pydoc3.8: file format not recognized
+strip: /usr/bin/roff2x: file format not recognized
+strip: /usr/bin/shasum: file format not recognized
+strip: /usr/bin/sotruss: file format not recognized
+strip: /usr/bin/xzmore: file format not recognized
+strip: /usr/bin/kibitz: file format not recognized
+strip: /usr/bin/yacc: file format not recognized
+strip: /usr/bin/neqn: file format not recognized
+strip: /usr/bin/pod2man: file format not recognized
+strip: /usr/bin/timed-run: file format not recognized
+strip: /usr/bin/xkibitz: file format not recognized
+strip: /usr/bin/texindex: file format not recognized
+strip: /usr/bin/autoupdate: file format not recognized
+strip: /usr/bin/gperl: file format not recognized
+strip: /usr/bin/automake-1.16: file format not recognized
+strip: /usr/bin/cryptdir: file format not recognized
+strip: /usr/bin/perlthanks: file format not recognized
+strip: /usr/bin/ncursesw6-config: file format not recognized
+strip: /usr/bin/intltoolize: file format not recognized
+strip: /usr/bin/dislocate: file format not recognized
+strip: /usr/bin/gettextize: file format not recognized
+strip: /usr/bin/grog: file format not recognized
+strip: /usr/bin/mkpasswd: file format not recognized
+strip: /usr/bin/h2xs: file format not recognized
+strip: /usr/bin/grap2graph: file format not recognized
+strip: /usr/bin/pdfmom: file format not recognized
+strip: /usr/bin/roff2pdf: file format not recognized
+strip: /usr/bin/instmodsh: file format not recognized
+strip: /usr/bin/python3.8-config: file format not recognized
+strip: /usr/bin/ifnames: file format not recognized
+strip: /usr/bin/roff2html: file format not recognized
+strip: /usr/bin/pod2texi: file format not recognized
+strip: /usr/bin/mmroff: file format not recognized
+strip: /usr/bin/zfgrep: file format not recognized
+strip: /usr/bin/autopasswd: file format not recognized
+strip: /usr/bin/perlbug: file format not recognized
+strip: /usr/bin/autom4te: file format not recognized
+strip: /usr/bin/pdftexi2dvi: file format not recognized
+strip: /usr/bin/texi2pdf: file format not recognized
+strip: /usr/bin/groffer: file format not recognized
+strip: /usr/bin/splain: file format not recognized
+strip: /usr/bin/passmass: file format not recognized
+strip: /usr/bin/meson: file format not recognized
+strip: /usr/bin/intltool-merge: file format not recognized
+strip: /usr/bin/autoreconf: file format not recognized
+strip: /usr/bin/roff2ps: file format not recognized
+strip: /usr/bin/pip3.8: file format not recognized
+strip: /usr/bin/autoheader: file format not recognized
+strip: /usr/bin/c_rehash: file format not recognized
+strip: /usr/bin/libnetcfg: file format not recognized
+strip: /usr/bin/gettext.sh: file format not recognized
+strip: /usr/bin/rlogin-cwd: file format not recognized
+strip: /usr/bin/h2ph: file format not recognized
+strip: /usr/bin/ptar: file format not recognized
+strip: /usr/bin/libtool: file format not recognized
+strip: /usr/bin/zgrep: file format not recognized
+strip: /usr/bin/libtoolize: file format not recognized
+strip: /usr/bin/unbuffer: file format not recognized
+strip: /usr/bin/zegrep: file format not recognized
+strip: /usr/bin/roff2text: file format not recognized
+strip: /usr/bin/gzexe: file format not recognized
+strip: /usr/bin/texi2dvi: file format not recognized
+strip: /usr/bin/unicode_stop: file format not recognized
+strip: /usr/bin/corelist: file format not recognized
+strip: /usr/bin/catchsegv: file format not recognized
+strip: /usr/bin/eqn2graph: file format not recognized
+strip: /usr/bin/autopoint: file format not recognized
+strip: /usr/bin/gropdf: file format not recognized
+strip: /usr/bin/perlivp: file format not recognized
+strip: /usr/bin/xzdiff: file format not recognized
+strip: /usr/bin/checkmk: file format not recognized
+strip: /usr/bin/aclocal-1.16: file format not recognized
+strip: /usr/bin/json_pp: file format not recognized
+strip: /usr/bin/easy_install-3.8: file format not recognized
+strip: /usr/bin/ptargrep: file format not recognized
+strip: /usr/bin/pod2html: file format not recognized
+strip: /usr/bin/cpan: file format not recognized
+strip: /usr/bin/pod2usage: file format not recognized
+strip: /usr/bin/zstdless: file format not recognized
+strip: /usr/bin/perldoc: file format not recognized
+strip: /usr/bin/mtrace: file format not recognized
+strip: /usr/bin/ptardiff: file format not recognized
+strip: /usr/bin/tkpasswd: file format not recognized
+strip: /usr/bin/nroff: file format not recognized
+strip: /usr/bin/idle3.8: file format not recognized
+strip: /usr/bin/intltool-extract: file format not recognized
+strip: /usr/bin/ftp-rfc: file format not recognized
+strip: /usr/bin/zless: file format not recognized
+strip: /usr/bin/ldd: file format not recognized
+strip: /usr/bin/intltool-update: file format not recognized
+strip: /usr/bin/grub-kbdcomp: file format not recognized
+strip: /usr/bin/vimtutor: file format not recognized
+strip: /usr/bin/weather: file format not recognized
+strip: /usr/bin/zstdgrep: file format not recognized
+strip: /usr/bin/uncompress: file format not recognized
+strip: /usr/bin/zipdetails: file format not recognized
+strip: /usr/bin/2to3-3.8: file format not recognized
+strip: /usr/bin/lpunlock: file format not recognized
+strip: /usr/bin/podchecker: file format not recognized
+strip: /usr/bin/xzgrep: file format not recognized
+strip: /usr/bin/bzmore: file format not recognized
+strip: /usr/bin/pdfroff: file format not recognized
+strip: /usr/bin/streamzip: file format not recognized
+strip: /usr/bin/runtest: file format not recognized
+strip: /usr/bin/bzdiff: file format not recognized
+strip: /usr/bin/zcat: file format not recognized
+strip: /usr/bin/tzselect: file format not recognized
+strip: /usr/bin/autoscan: file format not recognized
+strip: /usr/bin/chem: file format not recognized
+strip: /usr/bin/afmtodit: file format not recognized
+strip: /usr/bin/tknewsbiff: file format not recognized
+strip: /usr/bin/sqlite3_analyzer: file format not recognized
+strip: /usr/libexec/gcc/x86_64-pc-linux-gnu/10.2.0/install-tools/fixinc.sh: file format not recognized
+strip: /usr/libexec/gcc/x86_64-pc-linux-gnu/10.2.0/install-tools/mkinstalldirs: file format not recognized
+strip: /usr/libexec/gcc/x86_64-pc-linux-gnu/10.2.0/install-tools/mkheaders: file format not recognized
+strip: /usr/libexec/gcc/x86_64-pc-linux-gnu/10.2.0/liblto_plugin.la: file format not recognized
+strip: /usr/libexec/gcc/x86_64-lfs-linux-gnu/10.2.0/install-tools/fixinc.sh: file format not recognized
+strip: /usr/libexec/gcc/x86_64-lfs-linux-gnu/10.2.0/install-tools/mkinstalldirs: file format not recognized
+strip: /usr/libexec/gcc/x86_64-lfs-linux-gnu/10.2.0/install-tools/mkheaders: file format not recognized
+(lfs chroot) root:/usr/lib# 
+```
+
 ### 8.78 清理
 
-现在，可以使用 `df -h /mnt/lfs` 查看一下磁盘所占用的空间，以便于清理之后进行对比。
+现在，可以使用 `df -h /` 查看一下磁盘所占用的空间，以便于清理之后进行对比。
 
 ```sh
-df -h /mnt/lfs
+(lfs chroot) root:/usr/lib# df -h /       
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdb1        20G  2.4G   17G  13% /
 ```
 
 最后，清理运行测试留下的一些额外文件：
 
 ```sh
-rm -rf /tmp/*
+(lfs chroot) root:/usr/lib# rm -rf /tmp/*
 ```
 
 现在注销并使用新的 chroot 命令重新进入 chroot 环境。从现在开始，在退出后需要重新进入 chroot 环境时，退出之后请使用下面新的 chroot 命令：
@@ -7434,7 +9348,15 @@ rm -rf /tmp/*
 
 ```sh
 # 退出 chroot 环境
-logout
+(lfs chroot) root:/usr/lib# logout
+root@ubuntu:~# 
+
+# 在执行进入 chroot 环境的步骤前，为了确保已经挂载了虚拟内核文件系统，请执行以下命令
+root@ubuntu:~# ls $LFS
+bin   dev  home  lib64       media  opt   root  sbin     srv  tmp    usr
+boot  etc  lib   lost+found  mnt    proc  run   sources  sys  tools  var
+# 如果可以显示以上文件，说明虚拟内核文件系统已被正确挂载，否则，请参考 [9.14.3 恢复] 章节重新挂载！！
+
 # 使用新的命令进入 chroot 环境
 chroot "$LFS" /usr/bin/env -i          \
     HOME=/root TERM="$TERM"            \
@@ -7448,44 +9370,51 @@ chroot "$LFS" /usr/bin/env -i          \
 为了满足几个包中的回归测试，本章前面没有抑制几个静态库。这些库来自 binutils、bzip2、e2fsprogs、flex、libtool 和 zlib。如果需要，现在可以删除它们：
 
 ```sh
-rm -f /usr/lib/lib{bfd,opcodes}.a
-rm -f /usr/lib/libctf{,-nobfd}.a
-rm -f /usr/lib/libbz2.a
-rm -f /usr/lib/lib{com_err,e2p,ext2fs,ss}.a
-rm -f /usr/lib/libltdl.a
-rm -f /usr/lib/libfl.a
-rm -f /usr/lib/libz.a
+(lfs chroot) root:/# rm -f /usr/lib/lib{bfd,opcodes}.a
+(lfs chroot) root:/# rm -f /usr/lib/libctf{,-nobfd}.a
+(lfs chroot) root:/# rm -f /usr/lib/libbz2.a
+(lfs chroot) root:/# rm -f /usr/lib/lib{com_err,e2p,ext2fs,ss}.a
+(lfs chroot) root:/# rm -f /usr/lib/libltdl.a
+(lfs chroot) root:/# rm -f /usr/lib/libfl.a
+(lfs chroot) root:/# rm -f /usr/lib/libz.a
 ```
 
 在 `/usr/lib` 和 `/usr/libexec` 目录中还安装了几个文件扩展名为 `.la` 的文件。这些是 "libtool 归档" 文件。如前所述，它们仅在与静态库链接时才有用。当使用动态共享库时，尤其是在使用非自动工具构建系统时，它们是不需要的，并且可能有害。要删除它们，请运行：
 
 ```sh
-find /usr/lib /usr/libexec -name \*.la -delete
+(lfs chroot) root:/# find /usr/lib /usr/libexec -name \*.la -delete
 ```
 
 有关 libtool 存档文件的更多信息，请参阅 BLFS 部分 "关于 Libtool 存档 (.la) 文件" 。
 
-第 6 章和第 7 章中构建的编译器仍然部分安装，不再需要。删除它：
+第 6 章和第 7 章中仍然安装了一些构建时的编译器，现在不再需要它们。删除它：
 
 ```sh
-find /usr -depth -name $(uname -m)-lfs-linux-gnu\* | xargs rm -rf
+(lfs chroot) root:/# find /usr -depth -name $(uname -m)-lfs-linux-gnu\* | xargs rm -rf
 ```
 
 也可以删除 `/tools` 目录以进一步获得一些空间：
 
 ```sh
-rm -rf /tools
+(lfs chroot) root:/# rm -rf /tools
 ```
 
 最后，删除在上一章开头创建的临时 `tester` 用户帐户。
 
 ```sh
-userdel -r tester
+(lfs chroot) root:/# userdel -r tester
+userdel: tester mail spool (/var/mail/tester) not found
 ```
 
 系统清理终于结束了！！
 
-现在，可以使用 `df -h /mnt/lfs` 查看一下磁盘所占用的空间。
+现在，可以使用 `df -h /` 查看一下磁盘所占用的空间。
+
+```sh
+(lfs chroot) root:/# df -h /
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdb1        20G  1.6G   17G   9% /
+```
 
 **强烈建议再次使用 *快照功能* 进行备份**。
 
@@ -7499,7 +9428,7 @@ userdel -r tester
 
 System V 是经典的引导过程，自 1983 年以来一直在 Unix 和类 Unix 系统（如 Linux）中使用。它由一个小程序 init 组成，它设置诸如 login（通过 getty）之类的基本程序并运行一个脚本。该脚本通常名为 rc，控制一组附加脚本的执行，这些脚本执行初始化系统所需的任务。
 
-init 程序由 /etc/inittab 文件控制，并组织成用户可以运行的运行级别：
+init 程序由 `/etc/inittab` 文件控制，并组织成用户可以运行的运行级别：
 
 * 0 — 停止
 * 1 — 单用户模式
@@ -7530,13 +9459,22 @@ LFS-Bootscripts 包含一组在启动/关闭时启动/停止 LFS 系统的脚本
 解压软件包
 
 ```sh
-
+(lfs chroot) root:/# cd /sources/
+(lfs chroot) root:/sources# tar xf lfs-bootscripts-20200818.tar.xz 
+(lfs chroot) root:/sources# cd lfs-bootscripts-20200818
 ```
 
 安装软件包
 
 ```sh
-make install
+(lfs chroot) root:/sources/lfs-bootscripts-20200818# make install
+```
+
+清除软件包
+
+```sh
+(lfs chroot) root:/sources/lfs-bootscripts-20200818# cd ..
+(lfs chroot) root:/sources# rm -rf lfs-bootscripts-20200818
 ```
 
 ### 9.3 设备和模块处理概述
@@ -7636,48 +9574,192 @@ blacklist forte
 
 这是因为 udev 按照设计并行处理 uevent 和加载模块，因此顺序不可预测。这永远不会“固定”。您不应依赖内核设备名称的稳定性。相反，创建您自己的规则，根据设备的某些稳定属性（例如序列号或 udev 安装的各种 *_id 实用程序的输出）使用稳定名称创建符号链接。有关示例，请参见第 9.4 节“管理设备”和第 9.5 节“常规网络配置”。
 
-#### 9.3.4. 有用的阅读
+#### 9.3.4. 帮助文档
 
-以下站点提供了其他有用的文档：
+以下站点提供了其他有用的帮助文档：
 
 * devfs 的用户空间实现 http://www.kroah.com/linux/talks/ols_2003_udev_paper/Reprint-Kroah-Hartman-OLS2003.pdf
 
 * sysfs文件系统 http://www.kernel.org/pub/linux/kernel/people/mochel/doc/papers/ols-2005/mochel.pdf
 
+### 9.4 管理设备
 
+#### 9.4.1 网络设备
 
+默认情况下，Udev 根据固件/BIOS 数据或物理特性（如总线、插槽或 MAC 地址）命名网络设备。此命名约定的目的是确保网络设备的命名一致，而不是基于发现网卡的时间。比如一台有Intel和Realtek两块网卡的电脑，Intel制造的网卡可能变成eth0，Realtek的网卡变成eth1。在某些情况下，重新启动后，卡可能会以相反的方式重新编号。
 
+在新的命名方案中，典型的网络设备名称将类似于 enp5s0 或 wlp3s0。如果不需要此命名约定，则可以实现传统命名方案或自定义方案。
 
+##### 9.4.1.1 在内核命令行上禁用持久命名
 
+使用 eth0、eth1 等的传统命名方案可以通过在内核命令行中添加 `net.ifnames=0` 来恢复。这最适合那些只有一个相同类型的以太网设备的系统。笔记本电脑通常有多个名为 eth0 和 wlan0 的以太网连接，也是这种方法的候选者。命令行在 GRUB 配置文件中传递。请参阅第 10.4.4 节，“创建 GRUB 配置文件”。
 
+##### 9.4.1.2 创建自定义 Udev 规则
 
+命名方案可以通过创建自定义 udev 规则来自定义。已包含生成初始规则的脚本。通过以下命令生成这些规则：
 
+```sh
+(lfs chroot) root:/sources# bash /lib/udev/init-net-rules.sh
+```
 
+现在，检查 `/etc/udev/rules.d/70-persistent-net.rules` 文件，找出分配给哪个网络设备的名称：
 
+```sh
+(lfs chroot) root:/sources# cat /etc/udev/rules.d/70-persistent-net.rules
+cat: /etc/udev/rules.d/70-persistent-net.rules: No such file or directory
+# 我这里没有自动生成该文件
+```
 
+注意：在某些情况下，例如手动将 MAC 地址分配给网卡或在 Qemu 或 Xen 等虚拟环境中时，**可能不会生成网络规则文件**，因为地址分配不一致。在这些情况下，不能使用此方法。
 
+该文件以注释块开头，后跟每个 NIC 的两行。每个 NIC 的第一行是带注释的描述，显示其硬件 ID（例如，其 PCI 供应商和设备 ID，如果是 PCI 卡），以及括号中的驱动程序（如果可以找到驱动程序）。硬件 ID 和驱动程序都不用于确定为接口指定哪个名称；此信息仅供参考。第二行是 udev 规则，它匹配这个 NIC 并实际为其分配一个名称。
 
+所有 udev 规则都由几个键组成，用逗号和可选的空格分隔。该规则的键和对每个键的解释如下：
 
+* `SUBSYSTEM=="net"` - 这告诉 udev 忽略不是网卡的设备。
+* `ACTION=="add"` - 这告诉 udev 对于不是 add 的 uevent 忽略此规则（“remove”和“change” uevents 也会发生，但不需要重命名网络接口）。
+* `DRIVERS=="?*"` - 存在这样 udev 将忽略 VLAN 或桥接子接口（因为这些子接口没有驱动程序）。这些子接口将被跳过，因为分配的名称会与其父设备发生冲突。
+* `ATTR{address}` - 该键的值是 NIC 的 MAC 地址。
+* `ATTR{type}=="1"` - 这确保规则仅在某些创建多个虚拟接口的无线驱动程序的情况下匹配主接口。跳过辅助接口的原因与跳过 VLAN 和网桥子接口的原因相同：否则会发生名称冲突。
+* `NAME` - 该键的值是 udev 将分配给该接口的名称。
 
+`NAME` 的值是重要的部分。在继续之前，请确保您知道已为每个网卡分配了哪个名称，并确保在下面创建配置文件时使用该 NAME 值。
 
+可能是由于我没有网卡设备，所以才出现的问题，**这个问题是可以忽略**。
 
+我**自作聪明地**参考了 https://www.cnblogs.com/coolYuan/p/11077614.html 的解决方案：
 
+```sh
+(lfs chroot) root:/sources# cat /etc/udev/rules.d/70-persistent-net.rules
+cat: /etc/udev/rules.d/70-persistent-net.rules: No such file or directory
+(lfs chroot) root:/sources# /lib/udev/write_net_rules
+missing $INTERFACE
+(lfs chroot) root:/sources# export INTERFACE="eth0"
+(lfs chroot) root:/sources# /lib/udev/write_net_rules
+missing valid match
+(lfs chroot) root:/sources# export MATCHADDR="23:33:33:33:33:65" # 我瞎编了一个MAC地址
+(lfs chroot) root:/sources# /lib/udev/write_net_rules
+(lfs chroot) root:/sources# cat /etc/udev/rules.d/70-persistent-net.rules
+# This file was automatically generated by the /lib/udev/write_net_rules
+# program, run by the persistent-net-generator.rules rules file.
+#
+# You can modify it, as long as you keep each rule on a single
+# line, and change only the value of the NAME= key.
 
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="23:33:33:33:33:65", NAME="eth0"
+(lfs chroot) root:/sources# 
+```
 
+#### 9.4.2. CD-ROM 链接
 
+您可能希望稍后安装的某些软件（例如，各种媒体播放器）需要 `/dev/cdrom` 和 `/dev/dvd` 符号链接存在，并指向 CD-ROM 或 DVD-ROM 设备。将这些符号链接的引用放入 `/etc/fstab` 可能会很方便。Udev 附带了一个脚本，该脚本将生成规则文件来为您创建这些符号链接，具体取决于每个设备的功能，但您需要决定您希望脚本使用两种操作模式中的哪一种。
 
+首先，脚本可以在 `by-path` 模式下运行（默认用于 USB 和 FireWire 设备），它创建的规则取决于 CD 或 DVD 设备的物理路径。其次，它可以在 `by-id` 模式（IDE 和 SCSI 设备的默认设置）下运行，它创建的规则取决于存储在 CD 或 DVD 设备本身上的标识字符串。路径由 udev 的 `path_id` 脚本确定，标识字符串由其 `ata_id` 或 `scsi_id` 程序从硬件中读取，具体取决于您拥有的设备类型。
 
+每种方法都有其优点；正确的使用方法取决于可能发生的设备更改类型。如果您希望设备的物理路径（即它插入的端口和/或插槽）发生变化，例如，因为您计划将驱动器移动到不同的 IDE 端口或不同的 USB 连接器，那么您应该使用 `by-id` 模式。另一方面，如果您预计设备的标识会发生变化，例如因为它可能会死机，如果您将其替换为具有相同功能且插入相同连接器的不同设备，那么您应该使用 `by-path` 模式。
 
+如果您的驱动器可以进行任一类型的更改，请根据您希望更频繁发生的更改类型选择一种模式。
 
+重要：外部设备（例如，USB 连接的 CD 驱动器）不应使用 `by-path` ，因为每次将设备插入新的外部端口时，其物理路径都会发生变化。如果你写udev规则 `by-path` 来识别它们，所有外部连接的设备都会有这个问题；问题不仅限于 CD 和 DVD 驱动器。
 
+如果您想查看 udev 脚本将使用的值，那么对于相应的 CD-ROM 设备，在 /sys 下找到相应的目录（例如，这可以是 /sys/block/hdd）并运行类似于下列的：
 
+```sh
+(lfs chroot) root:/sources# udevadm test /sys/block/hdd
+calling: test
+version 3.2.9
+This program is for debugging only, it does not run any program
+specified by a RUN key. It may show incorrect results, because
+some values may be different, or not available at a simulation run.
 
+=== trie on-disk ===
+tool version:          3
+file size:         8270736 bytes
+header size             80 bytes
+strings            2110312 bytes
+nodes              6160344 bytes
+Load module index
+timestamp of '/etc/udev/rules.d' changed
+Reading rules file: /lib/udev/rules.d/50-udev-default.rules
+Reading rules file: /etc/udev/rules.d/55-lfs.rules
+Reading rules file: /lib/udev/rules.d/60-block.rules
+Reading rules file: /lib/udev/rules.d/60-cdrom_id.rules
+Reading rules file: /lib/udev/rules.d/60-drm.rules
+Reading rules file: /lib/udev/rules.d/60-evdev.rules
+Reading rules file: /lib/udev/rules.d/60-input-id.rules
+Reading rules file: /lib/udev/rules.d/60-persistent-alsa.rules
+Reading rules file: /lib/udev/rules.d/60-persistent-input.rules
+Reading rules file: /lib/udev/rules.d/60-persistent-storage-tape.rules
+Reading rules file: /lib/udev/rules.d/60-persistent-storage.rules
+Reading rules file: /lib/udev/rules.d/60-persistent-v4l.rules
+Reading rules file: /lib/udev/rules.d/60-sensor.rules
+Reading rules file: /lib/udev/rules.d/60-serial.rules
+Reading rules file: /lib/udev/rules.d/64-btrfs.rules
+Reading rules file: /lib/udev/rules.d/70-joystick.rules
+Reading rules file: /lib/udev/rules.d/70-mouse.rules
+Reading rules file: /etc/udev/rules.d/70-persistent-net.rules
+Reading rules file: /lib/udev/rules.d/70-touchpad.rules
+Reading rules file: /lib/udev/rules.d/75-net-description.rules
+Reading rules file: /lib/udev/rules.d/75-probe_mtd.rules
+Reading rules file: /lib/udev/rules.d/78-sound-card.rules
+Reading rules file: /lib/udev/rules.d/80-drivers.rules
+Reading rules file: /lib/udev/rules.d/80-net-name-slot.rules
+Reading rules file: /etc/udev/rules.d/81-cdrom.rules
+Reading rules file: /etc/udev/rules.d/83-cdrom-symlinks.rules
+Reading rules file: /lib/udev/rules.d/96-e2scrub.rules
+rules contain 24576 bytes tokens (2048 * 12 bytes), 8710 bytes strings
+1140 strings (14949 bytes), 712 de-duplicated (6668 bytes), 429 trie nodes used
+unable to open device '/sys/block/hdd'
+Unload module index
+```
 
+查看包含各种 *_id 程序输出的行。`by-id` 模式将使用 ID_SERIAL 值，如果它存在且不为空；否则它将使用 ID_MODEL 和 ID_REVISION 的组合。 `by-path` 模式将使用 ID_PATH 值。
 
+如果默认模式不适合你的情况，那么可以对 `/etc/udev/rules.d/83-cdrom-symlinks.rules` 文件进行如下修改，如下（其中模式是 `by-id` 或 `by-id`）：
 
+```sh
+# (我不运行此命令)
+sed -e 's/"write_cd_rules"/"write_cd_rules mode"/' \
+    -i /etc/udev/rules.d/83-cdrom-symlinks.rules
+```
 
+请注意，此时没有必要创建规则文件或符号链接，因为您已将宿主机的 /dev 目录绑定挂载到 LFS 系统中，并且我们假设符号链接存在于宿主机上。规则和符号链接将在您第一次启动 LFS 系统时创建。
 
+但是，如果您有多个 CD-ROM 设备，那么当时生成的符号链接可能指向不同的设备，而不是它们指向您宿主机上的设备，因为设备不会以可预测的顺序被发现。首次启动 LFS 系统时创建的分配将是稳定的，因此只有当您需要两个系统上的符号链接指向同一设备时，这才是一个问题。如果需要，请在启动后检查（并可能编辑）生成的 `/etc/udev/rules.d/70-persistent-cd.rules` 文件，以确保分配的符号链接符合您的需要。
 
+#### 9.4.3 处理重复设备
+
+如第 9.3 节“设备和模块处理概述”所述，具有相同功能的设备出现在 `/dev` 中的顺序基本上是随机的。如果您有 USB 网络摄像头和电视调谐器，有时 `/dev/video0` 指的是摄像头，而 `/dev/video1` 指的是调谐器，有时重新启动后顺序会发生变化。对于除声卡和网卡之外的所有硬件类别，这可以通过为自定义持久符号链接创建 udev 规则来解决。网卡的情况在第 9.5 节“一般网络配置”中单独介绍，声卡配置可以在 BLFS 中找到。
+
+对于可能出现此问题的每个设备（即使该问题在您当前的 Linux 发行版中不存在），在 `/sys/class` 或 `/sys/block` 下找到对应的目录。对于视频设备，这可能是 `/sys/class/video4linux/videoX`。对于视频设备，这可能是 `/sys/class/video4linux/videoX`。找出唯一标识设备的属性（通常，供应商和产品 ID 和/或序列号有效）：
+
+```sh
+# (我不运行此命令)
+udevadm info -a -p /sys/class/video4linux/video0
+```
+
+然后编写创建符号链接的规则，例如：
+
+```sh
+# (我不运行此命令)
+cat > /etc/udev/rules.d/83-duplicate_devs.rules << "EOF"
+
+# Persistent symlinks for webcam and tuner
+KERNEL=="video*", ATTRS{idProduct}=="1910", ATTRS{idVendor}=="0d81", SYMLINK+="webcam"
+KERNEL=="video*", ATTRS{device}=="0x036f",  ATTRS{vendor}=="0x109e", SYMLINK+="tvtuner"
+
+EOF
+```
+
+结果是 `/dev/video0` 和 `/dev/video1` 设备仍然随机引用调谐器和网络摄像头（因此永远不应直接使用），但有符号链接 `/dev/tvtuner` 和 `/dev/webcam` 总是指向到正确的设备。
+
+### 9.5 通用网络设置
+
+#### 9.5.1 创建网络接口配置文件
+
+网络脚本启动和关闭哪些接口通常取决于 `/etc/sysconfig/` 中的文件。这个目录应该包含每个要配置的接口的文件，例如 `ifconfig.xyz`，其中 `xyz` 应该描述网卡。接口名称（例如 eth0）通常是合适的。此文件中包含此接口的属性，例如其 IP 地址、子网掩码等。文件名的主干必须是 ifconfig。
+
+如果没有使用上一节(9.4 章节)中的过程，udev 将根据系统物理特性（例如 enp2s1）分配网卡接口名称。
 
 
 
